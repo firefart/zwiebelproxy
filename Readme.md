@@ -33,6 +33,7 @@ server {
   }
 
   location / {
+    proxy_read_timeout 5m;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-Port $server_port;
@@ -60,6 +61,7 @@ server {
   }
 
   location / {
+    proxy_read_timeout 5m;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-Port $server_port;
