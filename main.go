@@ -173,18 +173,20 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 	resp, err := app.httpClient.client.Do(req)
 	if err != nil {
 		if os.IsTimeout(err) {
-			app.logError(w, err, false, http.StatusGatewayTimeout)
+			app.logError(w, fmt.Errorf("timeout on %s: %w", req.URL.String(), err), false, http.StatusGatewayTimeout)
 			return
 		}
-		app.logError(w, err, false, http.StatusInternalServerError)
+		app.logError(w, fmt.Errorf("error on calling %s: %w", req.URL.String(), err), false, http.StatusInternalServerError)
 		return
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		app.logError(w, err, false, http.StatusInternalServerError)
+		app.logError(w, fmt.Errorf("error on reading body: %w", err), false, http.StatusInternalServerError)
 		return
 	}
+
+	app.logger.Debugf("%s: Got a %d body len with a status of %d", req.URL.String(), len(body), resp.StatusCode)
 
 	// replace stuff for domain replacement
 	body = bytes.ReplaceAll(body, []byte(`.onion"`), []byte(fmt.Sprintf(`%s"`, app.domain)))
@@ -193,18 +195,21 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 		k = strings.ReplaceAll(k, ".onion", app.domain)
 		for _, v2 := range v {
 			v2 = strings.ReplaceAll(v2, ".onion", app.domain)
+			app.logger.Debugf("%s: Adding header %s: %s", req.URL.String(), k, v2)
 			w.Header().Add(k, v2)
 		}
 	}
-	_, err = w.Write(body)
-	if err != nil {
-		app.logError(w, err, false, http.StatusInternalServerError)
-		return
-	}
 
-	// w.Header().Set("Content-Type", http.DetectContentType(yourBody))
+	// write will set the content-length. All headers need to be finalized before calling WriteHeader below!
+	w.Header().Del("Content-Length")
 
 	w.WriteHeader(resp.StatusCode)
+
+	_, err = w.Write(body)
+	if err != nil {
+		app.logError(w, fmt.Errorf("error on writing body to ResponseWriter: %w", err), false, http.StatusInternalServerError)
+		return
+	}
 }
 
 func (app *application) xHeaderMiddleware(next http.Handler) http.Handler {
