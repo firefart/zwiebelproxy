@@ -145,13 +145,30 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 	// strip own hostname
 	host, port, err := net.SplitHostPort(r.Host)
 	if err != nil {
-		app.logError(w, err, false, http.StatusBadRequest)
+		// no port present
+		host = r.Host
+		port = r.URL.Port()
 	}
 	host = strings.TrimSuffix(host, app.domain)
 	host = fmt.Sprintf("%s.onion", host)
-	host = net.JoinHostPort(host, port)
+	if port != "" && port != "80" && port != "443" {
+		host = net.JoinHostPort(host, port)
+	}
 	req.URL.Host = host
 	req.Host = host
+
+	if req.URL.Scheme == "" {
+		switch port {
+		case "":
+			req.URL.Scheme = "http"
+		case "80":
+			req.URL.Scheme = "http"
+		case "443":
+			req.URL.Scheme = "https"
+		default:
+			req.URL.Scheme = "http"
+		}
+	}
 
 	resp, err := app.httpClient.client.Do(req)
 	if err != nil {
@@ -198,18 +215,33 @@ func (app *application) xHeaderMiddleware(next http.Handler) http.Handler {
 				// this is already handled by the RealIP middleware
 				delete(r.Header, headerName)
 			case "X-Forwarded-Port":
+				port := headerValue[0]
 				host, _, err := net.SplitHostPort(r.URL.Host)
 				if err != nil {
-					app.logError(rw, err, false, http.StatusInternalServerError)
-					return
+					// err occurs if no port present so append one
+					if port != "" && port != "80" && port != "443" {
+						r.URL.Host = net.JoinHostPort(r.URL.Host, port)
+					}
+				} else {
+					if port != "" && port != "80" && port != "443" {
+						r.URL.Host = net.JoinHostPort(host, port)
+					} else {
+						r.URL.Host = host
+					}
 				}
-				r.URL.Host = net.JoinHostPort(host, headerValue[0])
 				host, _, err = net.SplitHostPort(r.Host)
 				if err != nil {
-					app.logError(rw, err, false, http.StatusInternalServerError)
-					return
+					// err occurs if no port present so append one
+					if port != "" && port != "80" && port != "443" {
+						r.Host = net.JoinHostPort(r.Host, port)
+					}
+				} else {
+					if port != "" && port != "80" && port != "443" {
+						r.Host = net.JoinHostPort(host, port)
+					} else {
+						r.Host = host
+					}
 				}
-				r.Host = net.JoinHostPort(host, headerValue[0])
 				delete(r.Header, headerName)
 			case "X-Forwarded-Proto":
 				r.URL.Scheme = headerValue[0]
