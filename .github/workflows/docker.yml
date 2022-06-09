@@ -1,0 +1,74 @@
+name: Build Docker Images
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout sources
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        id: buildx
+        with:
+          install: true
+
+      - name: Docker zwiebel meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: firefart/zwiebelproxy
+          tags: |
+            # set latest tag for default branch
+            type=raw,value=latest,enable={{is_default_branch}}
+            # make a sha tag
+            type=sha,enable=true,priority=100,prefix=zwiebelproxy-sha-,suffix=,format=short
+            type=schedule,pattern={{date 'YYYYMMDD'}},prefix=zwiebelproxy-nightly-
+
+      - name: Docker tor meta
+        id: meta_tor
+        uses: docker/metadata-action@v4
+        with:
+          images: firefart/zwiebelproxy
+          tags: |
+            # set latest tag for default branch
+            type=raw,value=tor-latest,enable={{is_default_branch}}
+            # make a sha tag
+            type=sha,enable=true,priority=100,prefix=tor-sha-,suffix=,format=short
+            type=schedule,pattern={{date 'YYYYMMDD'}},prefix=tor-nightly-
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2.0.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push zwiebelproxy
+        uses: docker/build-push-action@v3
+        with:
+          file: Dockerfile.zwiebelproxy
+          push: true
+          #platforms: linux/amd64,linux/arm/v7,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Build and push tor
+        uses: docker/build-push-action@v3
+        with:
+          file: Dockerfile.tor
+          push: true
+          #platforms: linux/amd64,linux/arm/v7,linux/arm64
+          tags: ${{ steps.meta_tor.outputs.tags }}
+          labels: ${{ steps.meta_tor.outputs.labels }}

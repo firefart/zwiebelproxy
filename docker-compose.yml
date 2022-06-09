@@ -1,0 +1,27 @@
+version: "3.9"
+services:
+  tor:
+    build:
+      context: .
+      dockerfile: Dockerfiles/Dockerfile.tor
+    deploy:
+      mode: replicated
+      replicas: 5
+    networks:
+      - tor
+
+  zwiebelproxy:
+    build:
+      context: .
+      dockerfile: Dockerfiles/Dockerfile.zwiebelproxy
+    env_file: .env
+    command: "--host :8000 --tor socks5://tor:9050"
+    depends_on:
+      - tor
+    networks:
+      - tor
+    ports:
+      - "127.0.0.1:8000:8000"
+
+networks:
+  tor: {}

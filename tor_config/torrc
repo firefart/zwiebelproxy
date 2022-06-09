@@ -1,0 +1,5 @@
+SOCKSPort 0.0.0.0:9050 IsolateDestAddr
+Log notice stderr
+DataDirectory /var/lib/tor
+ExitPolicy reject *:*
+RunAsDaemon 0

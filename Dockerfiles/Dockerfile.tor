@@ -1,0 +1,5 @@
+FROM alpine:latest
+RUN apk update && apk add --no-cache tor
+COPY tor_config/torrc /etc/tor/torrc
+USER tor
+CMD [ "/usr/bin/tor" ]
