@@ -7,6 +7,7 @@ services:
     deploy:
       mode: replicated
       replicas: 5
+    restart: unless-stopped
     networks:
       - tor
 
@@ -14,6 +15,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfiles/Dockerfile.zwiebelproxy
+    restart: unless-stopped
     env_file: .env
     command: "--host :8000 --tor socks5://tor:9050"
     depends_on:
