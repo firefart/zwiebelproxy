@@ -84,7 +84,7 @@ func main() {
 	// print number of goroutines in debug mode
 	if *debug {
 		go func() {
-			goRoutineTicker := time.NewTicker(3 * time.Second)
+			goRoutineTicker := time.NewTicker(1 * time.Minute)
 			for range goRoutineTicker.C {
 				log.Debugf("number of goroutines: %d", runtime.NumGoroutine())
 			}
@@ -169,6 +169,8 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 			req.URL.Scheme = "http"
 		}
 	}
+
+	app.logger.Debugf("sending request %+v", req)
 
 	resp, err := app.httpClient.client.Do(req)
 	if err != nil {
