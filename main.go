@@ -180,8 +180,8 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 	app.logger.Debugf("%s: Got a %d body len with a status of %d", req.URL.String(), len(body), resp.StatusCode)
 
 	// replace stuff for domain replacement
+	body = bytes.ReplaceAll(body, []byte(`.onion/`), []byte(fmt.Sprintf(`%s/`, app.domain)))
 	body = bytes.ReplaceAll(body, []byte(`.onion"`), []byte(fmt.Sprintf(`%s"`, app.domain)))
-	body = bytes.ReplaceAll(body, []byte(`.onion/"`), []byte(fmt.Sprintf(`%s/"`, app.domain)))
 
 	for k, v := range resp.Header {
 		k = strings.ReplaceAll(k, ".onion", app.domain)
