@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"runtime"
 	"runtime/debug"
 	"strings"
 	"syscall"
@@ -36,7 +35,7 @@ func main() {
 
 	err := godotenv.Load()
 	if err != nil {
-		log.Errorf("Error loading .env file: %v. continuing without", err)
+		log.Warnf("could not load .env file: %v. continuing without", err)
 	}
 
 	host := flag.String("host", lookupEnvOrString(log, "ZWIEBEL_HOST", "127.0.0.1:8080"), "IP and Port to bind to. You can also use the ZWIEBEL_HOST environment variable or an entry in the .env file to set this parameter.")
@@ -80,16 +79,6 @@ func main() {
 		Handler: app.routes(),
 	}
 	log.Infof("Starting server on %s", *host)
-
-	// print number of goroutines in debug mode
-	if *debug {
-		go func() {
-			goRoutineTicker := time.NewTicker(1 * time.Minute)
-			for range goRoutineTicker.C {
-				log.Debugf("number of goroutines: %d", runtime.NumGoroutine())
-			}
-		}()
-	}
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
