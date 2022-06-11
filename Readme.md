@@ -70,3 +70,94 @@ server {
   }
 }
 ```
+
+Example with [https://github.com/firefart/nginxreverseauth](https://github.com/firefart/nginxreverseauth) as an authentication proxy (the service needs to be running and configured for this to work):
+
+```conf
+server {
+  listen 80;
+  listen [::]:80;
+
+  server_name onion.tld *.onion.tld;
+
+  root /var/www/html;
+  index index.html;
+
+  access_log /var/log/nginx/zwiebelproxy_access.log;
+  error_log /var/log/nginx/zwiebelproxy_error.log;
+
+  location /.well-known {
+    allow all;
+    break;
+  }
+
+  location = /auth {
+    allow 127.0.0.0/8;
+    allow 10.0.0.0/8;
+    allow 172.16.0.0/12;
+    allow 192.168.0.0/16;
+    deny all;
+
+    proxy_pass_request_body off;
+    proxy_set_header Content-Length "";
+    proxy_set_header X-Original-URI $request_uri;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_pass http://localhost:8081;
+  }
+
+  location / {
+    auth_request /auth;
+    proxy_read_timeout 5m;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-Port $server_port;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_pass http://localhost:8000;
+  }
+}
+
+server {
+  listen 443 ssl http2;
+  listen [::]:443 ssl http2;
+  server_name onion.tld *.onion.tld;
+  root /var/www/html;
+  index index.html;
+
+  access_log /var/log/nginx/zwiebelproxy_access.log;
+  error_log /var/log/nginx/zwiebelproxy_error.log;
+
+  ssl_certificate /etc/letsencrypt/live/onion.tld/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/onion.tld/privkey.pem;
+
+  location /.well-known {
+    allow all;
+    break;
+  }
+
+  location = /auth {
+    allow 127.0.0.0/8;
+    allow 10.0.0.0/8;
+    allow 172.16.0.0/12;
+    allow 192.168.0.0/16;
+    deny all;
+
+    proxy_pass_request_body off;
+    proxy_set_header Content-Length "";
+    proxy_set_header X-Original-URI $request_uri;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_pass http://localhost:8081;
+  }
+
+  location / {
+    auth_request /auth;
+    proxy_read_timeout 5m;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-Port $server_port;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_pass http://localhost:8000;
+  }
+}
+
+
+```
