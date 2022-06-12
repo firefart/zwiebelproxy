@@ -167,13 +167,13 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 			app.logError(w, fmt.Errorf("timeout on %s: %w", req.URL.String(), err), false, http.StatusGatewayTimeout)
 			return
 		}
-		app.logError(w, fmt.Errorf("error on calling %s: %w", req.URL.String(), err), false, http.StatusInternalServerError)
+		app.logError(w, fmt.Errorf("error on calling %s: %w", req.URL.String(), err), false, http.StatusGatewayTimeout)
 		return
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		app.logError(w, fmt.Errorf("error on reading body: %w", err), false, http.StatusInternalServerError)
+		app.logError(w, fmt.Errorf("error on reading body: %w", err), false, http.StatusGatewayTimeout)
 		return
 	}
 
