@@ -3,3 +3,5 @@ Log notice stderr
 DataDirectory /var/lib/tor
 ExitPolicy reject *:*
 RunAsDaemon 0
+SafeLogging 0
+
