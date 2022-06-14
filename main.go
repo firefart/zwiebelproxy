@@ -3,11 +3,13 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"runtime/debug"
@@ -163,7 +165,8 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := app.httpClient.client.Do(req)
 	if err != nil {
-		if os.IsTimeout(err) {
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) && urlErr.Timeout() {
 			app.logError(w, fmt.Errorf("timeout on %s: %w", req.URL.String(), err), false, http.StatusGatewayTimeout)
 			return
 		}
@@ -208,10 +211,10 @@ func (app *application) xHeaderMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		for headerName, headerValue := range r.Header {
 			switch strings.ToLower(headerName) {
-			case "X-Real-IP":
+			case "x-real-ip":
 				// this is already handled by the RealIP middleware
 				delete(r.Header, headerName)
-			case "X-Forwarded-Port":
+			case "x-forwarded-port":
 				port := headerValue[0]
 				host, _, err := net.SplitHostPort(r.URL.Host)
 				if err != nil {
@@ -240,7 +243,7 @@ func (app *application) xHeaderMiddleware(next http.Handler) http.Handler {
 					}
 				}
 				delete(r.Header, headerName)
-			case "X-Forwarded-Proto":
+			case "x-forwarded-proto":
 				r.URL.Scheme = headerValue[0]
 				delete(r.Header, headerName)
 			}
