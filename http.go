@@ -26,10 +26,10 @@ func newHTTPClient(timeout time.Duration, proxyURL string) (*httpClient, error) 
 	tr.TLSHandshakeTimeout = timeout
 	tr.ExpectContinueTimeout = timeout
 	tr.ResponseHeaderTimeout = timeout
-	tr.Dial = (&net.Dialer{
+	tr.DialContext = (&net.Dialer{
 		Timeout:   timeout,
 		KeepAlive: timeout,
-	}).Dial
+	}).DialContext
 
 	return &httpClient{
 		tr: tr,
