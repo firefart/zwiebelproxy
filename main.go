@@ -1,18 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
-	"net/url"
+	"net/http/httputil"
 	"os"
 	"os/signal"
-	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -116,95 +112,68 @@ func (app *application) routes() http.Handler {
 	return r
 }
 
-func (app *application) logError(w http.ResponseWriter, err error, withTrace bool, status int) {
+func (app *application) logError(w http.ResponseWriter, err error, status int) {
 	w.Header().Set("Connection", "close")
 	errorText := fmt.Sprintf("%v", err)
 	app.logger.Error(errorText)
-	if withTrace {
-		app.logger.Errorf("%s", debug.Stack())
-	}
 	http.Error(w, http.StatusText(status), status)
 }
 
 func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
-	if !strings.HasSuffix(r.Host, app.domain) {
-		app.logError(w, fmt.Errorf("invalid domain %s", r.Host), false, http.StatusBadRequest)
-		return
-	}
-	req := r.Clone(r.Context())
-	req.RequestURI = ""
-	// strip own hostname
 	host, port, err := net.SplitHostPort(r.Host)
 	if err != nil {
 		// no port present
 		host = r.Host
 		port = r.URL.Port()
 	}
+
+	if !strings.HasSuffix(host, app.domain) {
+		app.logError(w, fmt.Errorf("invalid domain %s", r.Host), http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), app.timeout)
+	defer cancel()
+	r = r.WithContext(ctx)
+
 	host = strings.TrimSuffix(host, app.domain)
 	host = fmt.Sprintf("%s.onion", host)
 	if port != "" && port != "80" && port != "443" {
 		host = net.JoinHostPort(host, port)
 	}
-	req.URL.Host = host
-	req.Host = host
+	r.URL.Host = host
+	r.Host = host
 
-	if req.URL.Scheme == "" {
+	if r.URL.Scheme == "" {
 		switch port {
 		case "":
-			req.URL.Scheme = "http"
+			r.URL.Scheme = "http"
 		case "80":
-			req.URL.Scheme = "http"
+			r.URL.Scheme = "http"
 		case "443":
-			req.URL.Scheme = "https"
+			r.URL.Scheme = "https"
 		default:
-			req.URL.Scheme = "http"
+			r.URL.Scheme = "http"
 		}
 	}
 
-	app.logger.Debugf("sending request %+v", req)
+	// needed so the ip will not be leaked
+	r.Header["X-Forwarded-For"] = nil
 
-	resp, err := app.httpClient.client.Do(req)
-	if err != nil {
-		var urlErr *url.Error
-		if errors.As(err, &urlErr) && urlErr.Timeout() {
-			app.logError(w, fmt.Errorf("timeout on %s: %w", req.URL.String(), err), false, http.StatusGatewayTimeout)
-			return
-		}
-		app.logError(w, fmt.Errorf("error on calling %s: %w", req.URL.String(), err), false, http.StatusGatewayTimeout)
-		return
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		app.logError(w, fmt.Errorf("error on reading body: %w", err), false, http.StatusGatewayTimeout)
-		return
-	}
+	app.logger.Debugf("port: %+v", port)
+	app.logger.Debugf("r.URL: %+v", r.URL)
+	app.logger.Debugf("r.RequestURI: %+v", r.RequestURI)
+	app.logger.Debugf("r.Host: %+v", r.Host)
+	app.logger.Debugf("r.Header: %+v", r.Header)
 
-	app.logger.Debugf("%s: Got a %d body len with a status of %d", req.URL.String(), len(body), resp.StatusCode)
+	proxy := httputil.NewSingleHostReverseProxy(r.URL)
+	proxy.FlushInterval = -1
+	proxy.ModifyResponse = app.modifyResponse
+	proxy.Transport = app.httpClient.tr.Clone()
 
-	// replace stuff for domain replacement
-	body = bytes.ReplaceAll(body, []byte(`.onion/`), []byte(fmt.Sprintf(`%s/`, app.domain)))
-	body = bytes.ReplaceAll(body, []byte(`.onion"`), []byte(fmt.Sprintf(`%s"`, app.domain)))
+	app.logger.Debugf("sending request %+v", r)
 
-	for k, v := range resp.Header {
-		k = strings.ReplaceAll(k, ".onion", app.domain)
-		for _, v2 := range v {
-			v2 = strings.ReplaceAll(v2, ".onion", app.domain)
-			app.logger.Debugf("%s: Adding header %s: %s", req.URL.String(), k, v2)
-			w.Header().Add(k, v2)
-		}
-	}
-
-	// write will set the content-length. All headers need to be finalized before calling WriteHeader below!
-	w.Header().Del("Content-Length")
-
-	w.WriteHeader(resp.StatusCode)
-
-	_, err = w.Write(body)
-	if err != nil {
-		app.logError(w, fmt.Errorf("error on writing body to ResponseWriter: %w", err), false, http.StatusInternalServerError)
-		return
-	}
+	proxy.ServeHTTP(w, r)
 }
 
 func (app *application) xHeaderMiddleware(next http.Handler) http.Handler {

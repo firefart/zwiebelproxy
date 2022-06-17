@@ -3,13 +3,14 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"time"
 )
 
 type httpClient struct {
-	client *http.Client
+	tr *http.Transport
 }
 
 func newHTTPClient(timeout time.Duration, proxyURL string) (*httpClient, error) {
@@ -17,15 +18,20 @@ func newHTTPClient(timeout time.Duration, proxyURL string) (*httpClient, error) 
 	if err != nil {
 		return nil, fmt.Errorf("invalid proxy url %s: %w", proxyURL, err)
 	}
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		Proxy:           http.ProxyURL(proxy),
-	}
-	client := http.Client{
+
+	// used to clone the defaul transport
+	tr := http.DefaultTransport.(*http.Transport)
+	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	tr.Proxy = http.ProxyURL(proxy)
+	tr.TLSHandshakeTimeout = timeout
+	tr.ExpectContinueTimeout = timeout
+	tr.ResponseHeaderTimeout = timeout
+	tr.Dial = (&net.Dialer{
 		Timeout:   timeout,
-		Transport: tr,
-	}
+		KeepAlive: timeout,
+	}).Dial
+
 	return &httpClient{
-		client: &client,
+		tr: tr,
 	}, nil
 }
