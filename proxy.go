@@ -24,6 +24,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 	// no body modification on file downloads
 	contentDisp, ok := resp.Header["Content-Disposition"]
 	if ok && len(contentDisp) > 0 && strings.HasPrefix(contentDisp[0], "attachment") {
+		app.logger.Debugf("%s - detected file download, not attempting to modify body", resp.Request.URL.String())
 		return nil
 	}
 
