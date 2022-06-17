@@ -9,7 +9,7 @@ import (
 )
 
 func (app *application) modifyResponse(resp *http.Response) error {
-	app.logger.Debug("entered modifyResponse for %s with status %d", resp.Request.URL.String(), resp.StatusCode)
+	app.logger.Debugf("entered modifyResponse for %s with status %d", resp.Request.URL.String(), resp.StatusCode)
 
 	app.logger.Debugf("Header: %#v", resp.Header)
 	for k, v := range resp.Header {
