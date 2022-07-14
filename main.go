@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -20,10 +22,10 @@ import (
 )
 
 type application struct {
-	httpClient *httpClient
-	domain     string
-	timeout    time.Duration
-	logger     *logrus.Logger
+	torProxyURL *url.URL
+	domain      string
+	timeout     time.Duration
+	logger      *logrus.Logger
 }
 
 func main() {
@@ -59,17 +61,17 @@ func main() {
 		domain = &a
 	}
 
-	httpClient, err := newHTTPClient(*timeout, *tor)
+	torProxyURL, err := url.Parse(*tor)
 	if err != nil {
-		log.Error(err)
+		log.Errorf("invalid proxy url %s: %w", *tor, err)
 		os.Exit(1)
 	}
 
 	app := &application{
-		httpClient: httpClient,
-		domain:     *domain,
-		timeout:    *timeout,
-		logger:     log,
+		torProxyURL: torProxyURL,
+		domain:      *domain,
+		timeout:     *timeout,
+		logger:      log,
 	}
 
 	srv := &http.Server{
@@ -175,7 +177,18 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 
 	proxy.FlushInterval = -1
 	proxy.ModifyResponse = app.modifyResponse
-	proxy.Transport = app.httpClient.tr.Clone()
+	// used to clone the default transport
+	tr := http.DefaultTransport.(*http.Transport)
+	tr.Proxy = http.ProxyURL(app.torProxyURL)
+	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	tr.TLSHandshakeTimeout = app.timeout
+	tr.ExpectContinueTimeout = app.timeout
+	tr.ResponseHeaderTimeout = app.timeout
+	tr.DialContext = (&net.Dialer{
+		Timeout:   app.timeout,
+		KeepAlive: app.timeout,
+	}).DialContext
+	proxy.Transport = tr
 
 	app.logger.Debugf("sending request %+v", r)
 

@@ -36,3 +36,12 @@ func lookupEnvOrDuration(log *logrus.Logger, key string, defaultVal time.Duratio
 	}
 	return defaultVal
 }
+
+func sliceContains[T comparable](slice []T, value T) bool {
+	for _, item := range slice {
+		if item == value {
+			return true
+		}
+	}
+	return false
+}

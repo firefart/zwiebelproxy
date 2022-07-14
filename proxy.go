@@ -28,13 +28,39 @@ func (app *application) modifyResponse(resp *http.Response) error {
 		return nil
 	}
 
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
+	contentTypesForReplace := []string{
+		"text/plain",
+		"text/html",
+		"text/css",
+		"text/javascript",
+		"application/javascript",
+		"application/json",
+		"application/ld+json",
+	}
+
+	contentType, ok := resp.Header["Content-Type"]
+	if !ok {
+		app.logger.Debugf("%s - no content type skipping replace", resp.Request.URL.String())
+		return nil
+	}
+
+	if ok && len(contentType) > 0 {
+		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
+		cleanedUpContentType := strings.Split(contentType[0], ";")[0]
+		if !sliceContains(contentTypesForReplace, cleanedUpContentType) {
+			app.logger.Debugf("%s - content type is %s, not replacing", resp.Request.URL.String(), cleanedUpContentType)
+			return nil
+		}
+	}
+
+	// for all other content replace .onion urls with our custom domain
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("error on reading body: %w", err)
 	}
 	app.logger.Debugf("%s: Got a %d body len", resp.Request.URL.String(), len(body))
 	// replace stuff for domain replacement
-	body = bytes.ReplaceAll(body, []byte(`.onion/`), []byte(fmt.Sprintf(`%s/`, app.domain)))
 	body = bytes.ReplaceAll(body, []byte(`.onion"`), []byte(fmt.Sprintf(`%s"`, app.domain)))
 
 	// body can be read only once so recreate a new reader
