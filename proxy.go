@@ -4,10 +4,55 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 )
 
+// modify the request
+func (app *application) director(r *http.Request) {
+	host, port, err := net.SplitHostPort(r.Host)
+	if err != nil {
+		// no port present
+		host = r.Host
+		port = r.URL.Port()
+	}
+
+	host = strings.TrimSuffix(host, app.domain)
+	host = fmt.Sprintf("%s.onion", host)
+	if port != "" && port != "80" && port != "443" {
+		host = net.JoinHostPort(host, port)
+	}
+
+	scheme := r.URL.Scheme
+	if scheme == "" {
+		switch port {
+		case "":
+			scheme = "http"
+		case "80":
+			scheme = "http"
+		case "443":
+			scheme = "https"
+		default:
+			scheme = "http"
+		}
+	}
+
+	// needed so the ip will not be leaked
+	r.Header["X-Forwarded-For"] = nil
+
+	r.URL.Scheme = scheme
+	r.URL.Host = host
+	r.Host = host
+
+	app.logger.Debugf("r.port: %+v", port)
+	app.logger.Debugf("r.URL: %+v", r.URL)
+	app.logger.Debugf("r.RequestURI: %+v", r.RequestURI)
+	app.logger.Debugf("r.Host: %+v", r.Host)
+	app.logger.Debugf("r.Header: %+v", r.Header)
+}
+
+// modify the response
 func (app *application) modifyResponse(resp *http.Response) error {
 	app.logger.Debugf("entered modifyResponse for %s with status %d", resp.Request.URL.String(), resp.StatusCode)
 
@@ -53,6 +98,8 @@ func (app *application) modifyResponse(resp *http.Response) error {
 			return nil
 		}
 	}
+
+	app.logger.Debugf("%s - found content type %s, replacing strings", resp.Request.URL.String(), contentType[0])
 
 	// for all other content replace .onion urls with our custom domain
 	body, err := io.ReadAll(resp.Body)

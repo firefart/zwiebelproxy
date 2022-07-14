@@ -63,7 +63,7 @@ func main() {
 
 	torProxyURL, err := url.Parse(*tor)
 	if err != nil {
-		log.Errorf("invalid proxy url %s: %w", *tor, err)
+		log.Errorf("invalid proxy url %s: %v", *tor, err)
 		os.Exit(1)
 	}
 
@@ -122,57 +122,19 @@ func (app *application) logError(w http.ResponseWriter, err error, status int) {
 }
 
 func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
-	host, port, err := net.SplitHostPort(r.Host)
+	host, _, err := net.SplitHostPort(r.Host)
 	if err != nil {
 		// no port present
 		host = r.Host
-		port = r.URL.Port()
 	}
 
 	if !strings.HasSuffix(host, app.domain) {
-		app.logError(w, fmt.Errorf("invalid domain %s", r.Host), http.StatusBadRequest)
+		app.logError(w, fmt.Errorf("invalid domain %s", host), http.StatusBadRequest)
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), app.timeout)
-	defer cancel()
-	r = r.WithContext(ctx)
-
-	host = strings.TrimSuffix(host, app.domain)
-	host = fmt.Sprintf("%s.onion", host)
-	if port != "" && port != "80" && port != "443" {
-		host = net.JoinHostPort(host, port)
-	}
-
-	scheme := r.URL.Scheme
-	if scheme == "" {
-		switch port {
-		case "":
-			scheme = "http"
-		case "80":
-			scheme = "http"
-		case "443":
-			scheme = "https"
-		default:
-			scheme = "http"
-		}
-	}
-
-	// needed so the ip will not be leaked
-	r.Header["X-Forwarded-For"] = nil
-
 	proxy := httputil.ReverseProxy{
-		Director: func(r *http.Request) {
-			r.URL.Scheme = scheme
-			r.URL.Host = host
-			r.Host = host
-
-			app.logger.Debugf("port: %+v", port)
-			app.logger.Debugf("r.URL: %+v", r.URL)
-			app.logger.Debugf("r.RequestURI: %+v", r.RequestURI)
-			app.logger.Debugf("r.Host: %+v", r.Host)
-			app.logger.Debugf("r.Header: %+v", r.Header)
-		},
+		Director: app.director,
 	}
 
 	proxy.FlushInterval = -1
@@ -192,6 +154,10 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 
 	app.logger.Debugf("sending request %+v", r)
 
+	// set a custom timeout
+	ctx, cancel := context.WithTimeout(r.Context(), app.timeout)
+	defer cancel()
+	r = r.WithContext(ctx)
 	proxy.ServeHTTP(w, r)
 }
 
