@@ -141,32 +141,38 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 	if port != "" && port != "80" && port != "443" {
 		host = net.JoinHostPort(host, port)
 	}
-	r.URL.Host = host
-	r.Host = host
 
-	if r.URL.Scheme == "" {
+	scheme := r.URL.Scheme
+	if scheme == "" {
 		switch port {
 		case "":
-			r.URL.Scheme = "http"
+			scheme = "http"
 		case "80":
-			r.URL.Scheme = "http"
+			scheme = "http"
 		case "443":
-			r.URL.Scheme = "https"
+			scheme = "https"
 		default:
-			r.URL.Scheme = "http"
+			scheme = "http"
 		}
 	}
 
 	// needed so the ip will not be leaked
 	r.Header["X-Forwarded-For"] = nil
 
-	app.logger.Debugf("port: %+v", port)
-	app.logger.Debugf("r.URL: %+v", r.URL)
-	app.logger.Debugf("r.RequestURI: %+v", r.RequestURI)
-	app.logger.Debugf("r.Host: %+v", r.Host)
-	app.logger.Debugf("r.Header: %+v", r.Header)
+	proxy := httputil.ReverseProxy{
+		Director: func(r *http.Request) {
+			r.URL.Scheme = scheme
+			r.URL.Host = host
+			r.Host = host
 
-	proxy := httputil.NewSingleHostReverseProxy(r.URL)
+			app.logger.Debugf("port: %+v", port)
+			app.logger.Debugf("r.URL: %+v", r.URL)
+			app.logger.Debugf("r.RequestURI: %+v", r.RequestURI)
+			app.logger.Debugf("r.Host: %+v", r.Host)
+			app.logger.Debugf("r.Header: %+v", r.Header)
+		},
+	}
+
 	proxy.FlushInterval = -1
 	proxy.ModifyResponse = app.modifyResponse
 	proxy.Transport = app.httpClient.tr.Clone()
