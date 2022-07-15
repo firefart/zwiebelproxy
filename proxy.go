@@ -28,7 +28,12 @@ func (app *application) director(r *http.Request) {
 	if scheme == "" {
 		switch port {
 		case "":
-			scheme = "http"
+			// only set if we start a TLS server in go
+			if r.TLS != nil {
+				scheme = "https"
+			} else {
+				scheme = "http"
+			}
 		case "80":
 			scheme = "http"
 		case "443":
