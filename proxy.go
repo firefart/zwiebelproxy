@@ -19,6 +19,7 @@ func (app *application) director(r *http.Request) {
 	}
 
 	host = strings.TrimSuffix(host, app.domain)
+	host = strings.TrimSuffix(host, ".")
 	host = fmt.Sprintf("%s.onion", host)
 	if port != "" && port != "80" && port != "443" {
 		host = net.JoinHostPort(host, port)
@@ -28,12 +29,7 @@ func (app *application) director(r *http.Request) {
 	if scheme == "" {
 		switch port {
 		case "":
-			// only set if we start a TLS server in go
-			if r.TLS != nil {
-				scheme = "https"
-			} else {
-				scheme = "http"
-			}
+			scheme = "http"
 		case "80":
 			scheme = "http"
 		case "443":
@@ -43,6 +39,12 @@ func (app *application) director(r *http.Request) {
 		}
 	}
 
+	app.logger.Debugf("r.port: %#v", port)
+	app.logger.Debugf("r.URL: %#v", r.URL)
+	app.logger.Debugf("r.RequestURI: %#v", r.RequestURI)
+	app.logger.Debugf("r.Host: %#v", r.Host)
+	app.logger.Debugf("r.Header: %#v", r.Header)
+
 	// needed so the ip will not be leaked
 	r.Header["X-Forwarded-For"] = nil
 
@@ -50,11 +52,11 @@ func (app *application) director(r *http.Request) {
 	r.URL.Host = host
 	r.Host = host
 
-	app.logger.Debugf("r.port: %+v", port)
-	app.logger.Debugf("r.URL: %+v", r.URL)
-	app.logger.Debugf("r.RequestURI: %+v", r.RequestURI)
-	app.logger.Debugf("r.Host: %+v", r.Host)
-	app.logger.Debugf("r.Header: %+v", r.Header)
+	app.logger.Debugf("r.port: %#v", port)
+	app.logger.Debugf("r.URL: %#v", r.URL)
+	app.logger.Debugf("r.RequestURI: %#v", r.RequestURI)
+	app.logger.Debugf("r.Host: %#v", r.Host)
+	app.logger.Debugf("r.Header: %#v", r.Header)
 }
 
 // modify the response
@@ -72,6 +74,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 	}
 
 	// no body modification on file downloads
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition
 	contentDisp, ok := resp.Header["Content-Disposition"]
 	if ok && len(contentDisp) > 0 && strings.HasPrefix(contentDisp[0], "attachment") {
 		app.logger.Debugf("%s - detected file download, not attempting to modify body", resp.Request.URL.String())

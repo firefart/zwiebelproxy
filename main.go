@@ -25,7 +25,7 @@ type application struct {
 	transport *http.Transport
 	domain    string
 	timeout   time.Duration
-	logger    *logrus.Logger
+	logger    Logger
 }
 
 func main() {
