@@ -22,10 +22,10 @@ import (
 )
 
 type application struct {
-	torProxyURL *url.URL
-	domain      string
-	timeout     time.Duration
-	logger      *logrus.Logger
+	transport *http.Transport
+	domain    string
+	timeout   time.Duration
+	logger    *logrus.Logger
 }
 
 func main() {
@@ -67,11 +67,23 @@ func main() {
 		os.Exit(1)
 	}
 
+	// used to clone the default transport
+	tr := http.DefaultTransport.(*http.Transport)
+	tr.Proxy = http.ProxyURL(torProxyURL)
+	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	tr.TLSHandshakeTimeout = *timeout
+	tr.ExpectContinueTimeout = *timeout
+	tr.ResponseHeaderTimeout = *timeout
+	tr.DialContext = (&net.Dialer{
+		Timeout:   *timeout,
+		KeepAlive: *timeout,
+	}).DialContext
+
 	app := &application{
-		torProxyURL: torProxyURL,
-		domain:      *domain,
-		timeout:     *timeout,
-		logger:      log,
+		transport: tr,
+		domain:    *domain,
+		timeout:   *timeout,
+		logger:    log,
 	}
 
 	srv := &http.Server{
@@ -139,18 +151,7 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 
 	proxy.FlushInterval = -1
 	proxy.ModifyResponse = app.modifyResponse
-	// used to clone the default transport
-	tr := http.DefaultTransport.(*http.Transport)
-	tr.Proxy = http.ProxyURL(app.torProxyURL)
-	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	tr.TLSHandshakeTimeout = app.timeout
-	tr.ExpectContinueTimeout = app.timeout
-	tr.ResponseHeaderTimeout = app.timeout
-	tr.DialContext = (&net.Dialer{
-		Timeout:   app.timeout,
-		KeepAlive: app.timeout,
-	}).DialContext
-	proxy.Transport = tr
+	proxy.Transport = app.transport
 
 	app.logger.Debugf("sending request %+v", r)
 
