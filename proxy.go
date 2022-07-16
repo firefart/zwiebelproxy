@@ -39,11 +39,11 @@ func (app *application) director(r *http.Request) {
 		}
 	}
 
-	app.logger.Debugf("r.port: %#v", port)
-	app.logger.Debugf("r.URL: %#v", r.URL)
-	app.logger.Debugf("r.RequestURI: %#v", r.RequestURI)
-	app.logger.Debugf("r.Host: %#v", r.Host)
-	app.logger.Debugf("r.Header: %#v", r.Header)
+	app.logger.Debugf("r.port: %#v", sanitizeString(fmt.Sprintf("%#v", port)))
+	app.logger.Debugf("r.URL: %#v", sanitizeString(fmt.Sprintf("%#v", r.URL)))
+	app.logger.Debugf("r.RequestURI: %#v", sanitizeString(fmt.Sprintf("%#v", r.RequestURI)))
+	app.logger.Debugf("r.Host: %#v", sanitizeString(fmt.Sprintf("%#v", r.Host)))
+	app.logger.Debugf("r.Header: %#v", sanitizeString(fmt.Sprintf("%#v", r.Header)))
 
 	// needed so the ip will not be leaked
 	r.Header["X-Forwarded-For"] = nil
@@ -52,16 +52,16 @@ func (app *application) director(r *http.Request) {
 	r.URL.Host = host
 	r.Host = host
 
-	app.logger.Debugf("r.port: %#v", port)
-	app.logger.Debugf("r.URL: %#v", r.URL)
-	app.logger.Debugf("r.RequestURI: %#v", r.RequestURI)
-	app.logger.Debugf("r.Host: %#v", r.Host)
-	app.logger.Debugf("r.Header: %#v", r.Header)
+	app.logger.Debugf("r.port: %#v", sanitizeString(fmt.Sprintf("%#v", port)))
+	app.logger.Debugf("r.URL: %#v", sanitizeString(fmt.Sprintf("%#v", r.URL)))
+	app.logger.Debugf("r.RequestURI: %#v", sanitizeString(fmt.Sprintf("%#v", r.RequestURI)))
+	app.logger.Debugf("r.Host: %#v", sanitizeString(fmt.Sprintf("%#v", r.Host)))
+	app.logger.Debugf("r.Header: %#v", sanitizeString(fmt.Sprintf("%#v", r.Header)))
 }
 
 // modify the response
 func (app *application) modifyResponse(resp *http.Response) error {
-	app.logger.Debugf("entered modifyResponse for %s with status %d", resp.Request.URL.String(), resp.StatusCode)
+	app.logger.Debugf("entered modifyResponse for %s with status %d", sanitizeString(resp.Request.URL.String()), resp.StatusCode)
 
 	app.logger.Debugf("Header: %#v", resp.Header)
 	for k, v := range resp.Header {
@@ -77,7 +77,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition
 	contentDisp, ok := resp.Header["Content-Disposition"]
 	if ok && len(contentDisp) > 0 && strings.HasPrefix(contentDisp[0], "attachment") {
-		app.logger.Debugf("%s - detected file download, not attempting to modify body", resp.Request.URL.String())
+		app.logger.Debugf("%s - detected file download, not attempting to modify body", sanitizeString(resp.Request.URL.String()))
 		return nil
 	}
 
@@ -94,7 +94,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 
 	contentType, ok := resp.Header["Content-Type"]
 	if !ok {
-		app.logger.Debugf("%s - no content type skipping replace", resp.Request.URL.String())
+		app.logger.Debugf("%s - no content type skipping replace", sanitizeString(resp.Request.URL.String()))
 		return nil
 	}
 
@@ -102,19 +102,19 @@ func (app *application) modifyResponse(resp *http.Response) error {
 		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
 		cleanedUpContentType := strings.Split(contentType[0], ";")[0]
 		if !sliceContains(contentTypesForReplace, cleanedUpContentType) {
-			app.logger.Debugf("%s - content type is %s, not replacing", resp.Request.URL.String(), cleanedUpContentType)
+			app.logger.Debugf("%s - content type is %s, not replacing", sanitizeString(resp.Request.URL.String()), cleanedUpContentType)
 			return nil
 		}
 	}
 
-	app.logger.Debugf("%s - found content type %s, replacing strings", resp.Request.URL.String(), contentType[0])
+	app.logger.Debugf("%s - found content type %s, replacing strings", sanitizeString(resp.Request.URL.String()), contentType[0])
 
 	// for all other content replace .onion urls with our custom domain
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("error on reading body: %w", err)
 	}
-	app.logger.Debugf("%s: Got a %d body len", resp.Request.URL.String(), len(body))
+	app.logger.Debugf("%s: Got a %d body len", sanitizeString(resp.Request.URL.String()), len(body))
 	// replace stuff for domain replacement
 	body = bytes.ReplaceAll(body, []byte(`.onion"`), []byte(fmt.Sprintf(`%s"`, app.domain)))
 

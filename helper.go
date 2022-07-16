@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -44,4 +45,10 @@ func sliceContains[T comparable](slice []T, value T) bool {
 		}
 	}
 	return false
+}
+
+func sanitizeString(in string) string {
+	escaped := strings.Replace(in, "\n", "", -1)
+	escaped = strings.Replace(escaped, "\r", "", -1)
+	return escaped
 }
