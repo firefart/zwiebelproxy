@@ -1,37 +1,52 @@
 package main
 
 import (
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
-func lookupEnvOrString(log *logrus.Logger, key string, defaultVal string) string {
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randString(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
+
+func lookupEnvOrString(log Logger, key string, defaultVal string) string {
 	if val, ok := os.LookupEnv(key); ok {
 		return val
 	}
 	return defaultVal
 }
 
-func lookupEnvOrBool(log *logrus.Logger, key string, defaultVal bool) bool {
+func lookupEnvOrBool(log Logger, key string, defaultVal bool) bool {
 	if val, ok := os.LookupEnv(key); ok {
 		v, err := strconv.ParseBool(val)
 		if err != nil {
-			log.Fatalf("lookupEnvOrBool[%s]: %v", key, err)
+			log.Errorf("lookupEnvOrBool[%s]: %v", key, err)
+			return defaultVal
 		}
 		return v
 	}
 	return defaultVal
 }
 
-func lookupEnvOrDuration(log *logrus.Logger, key string, defaultVal time.Duration) time.Duration {
+func lookupEnvOrDuration(log Logger, key string, defaultVal time.Duration) time.Duration {
 	if val, ok := os.LookupEnv(key); ok {
 		v, err := time.ParseDuration(val)
 		if err != nil {
-			log.Fatalf("lookupEnvOrDuration[%s]: %v", key, err)
+			log.Errorf("lookupEnvOrDuration[%s]: %v", key, err)
+			return defaultVal
 		}
 		return v
 	}
