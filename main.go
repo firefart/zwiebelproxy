@@ -1,18 +1,16 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"errors"
+	"crypto/tls"
 	"flag"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/signal"
-	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -24,10 +22,10 @@ import (
 )
 
 type application struct {
-	httpClient *httpClient
-	domain     string
-	timeout    time.Duration
-	logger     *logrus.Logger
+	transport *http.Transport
+	domain    string
+	timeout   time.Duration
+	logger    Logger
 }
 
 func main() {
@@ -63,17 +61,29 @@ func main() {
 		domain = &a
 	}
 
-	httpClient, err := newHTTPClient(*timeout, *tor)
+	torProxyURL, err := url.Parse(*tor)
 	if err != nil {
-		log.Error(err)
+		log.Errorf("invalid proxy url %s: %v", *tor, err)
 		os.Exit(1)
 	}
 
+	// used to clone the default transport
+	tr := http.DefaultTransport.(*http.Transport)
+	tr.Proxy = http.ProxyURL(torProxyURL)
+	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	tr.TLSHandshakeTimeout = *timeout
+	tr.ExpectContinueTimeout = *timeout
+	tr.ResponseHeaderTimeout = *timeout
+	tr.DialContext = (&net.Dialer{
+		Timeout:   *timeout,
+		KeepAlive: *timeout,
+	}).DialContext
+
 	app := &application{
-		httpClient: httpClient,
-		domain:     *domain,
-		timeout:    *timeout,
-		logger:     log,
+		transport: tr,
+		domain:    *domain,
+		timeout:   *timeout,
+		logger:    log,
 	}
 
 	srv := &http.Server{
@@ -116,95 +126,40 @@ func (app *application) routes() http.Handler {
 	return r
 }
 
-func (app *application) logError(w http.ResponseWriter, err error, withTrace bool, status int) {
+func (app *application) logError(w http.ResponseWriter, err error, status int) {
 	w.Header().Set("Connection", "close")
 	errorText := fmt.Sprintf("%v", err)
 	app.logger.Error(errorText)
-	if withTrace {
-		app.logger.Errorf("%s", debug.Stack())
-	}
 	http.Error(w, http.StatusText(status), status)
 }
 
 func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
-	if !strings.HasSuffix(r.Host, app.domain) {
-		app.logError(w, fmt.Errorf("invalid domain %s", r.Host), false, http.StatusBadRequest)
-		return
-	}
-	req := r.Clone(r.Context())
-	req.RequestURI = ""
-	// strip own hostname
-	host, port, err := net.SplitHostPort(r.Host)
+	host, _, err := net.SplitHostPort(r.Host)
 	if err != nil {
 		// no port present
 		host = r.Host
-		port = r.URL.Port()
-	}
-	host = strings.TrimSuffix(host, app.domain)
-	host = fmt.Sprintf("%s.onion", host)
-	if port != "" && port != "80" && port != "443" {
-		host = net.JoinHostPort(host, port)
-	}
-	req.URL.Host = host
-	req.Host = host
-
-	if req.URL.Scheme == "" {
-		switch port {
-		case "":
-			req.URL.Scheme = "http"
-		case "80":
-			req.URL.Scheme = "http"
-		case "443":
-			req.URL.Scheme = "https"
-		default:
-			req.URL.Scheme = "http"
-		}
 	}
 
-	app.logger.Debugf("sending request %+v", req)
-
-	resp, err := app.httpClient.client.Do(req)
-	if err != nil {
-		var urlErr *url.Error
-		if errors.As(err, &urlErr) && urlErr.Timeout() {
-			app.logError(w, fmt.Errorf("timeout on %s: %w", req.URL.String(), err), false, http.StatusGatewayTimeout)
-			return
-		}
-		app.logError(w, fmt.Errorf("error on calling %s: %w", req.URL.String(), err), false, http.StatusGatewayTimeout)
-		return
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		app.logError(w, fmt.Errorf("error on reading body: %w", err), false, http.StatusGatewayTimeout)
+	if !strings.HasSuffix(host, app.domain) {
+		app.logError(w, fmt.Errorf("invalid domain %s", host), http.StatusBadRequest)
 		return
 	}
 
-	app.logger.Debugf("%s: Got a %d body len with a status of %d", req.URL.String(), len(body), resp.StatusCode)
-
-	// replace stuff for domain replacement
-	body = bytes.ReplaceAll(body, []byte(`.onion/`), []byte(fmt.Sprintf(`%s/`, app.domain)))
-	body = bytes.ReplaceAll(body, []byte(`.onion"`), []byte(fmt.Sprintf(`%s"`, app.domain)))
-
-	for k, v := range resp.Header {
-		k = strings.ReplaceAll(k, ".onion", app.domain)
-		for _, v2 := range v {
-			v2 = strings.ReplaceAll(v2, ".onion", app.domain)
-			app.logger.Debugf("%s: Adding header %s: %s", req.URL.String(), k, v2)
-			w.Header().Add(k, v2)
-		}
+	proxy := httputil.ReverseProxy{
+		Director: app.director,
 	}
 
-	// write will set the content-length. All headers need to be finalized before calling WriteHeader below!
-	w.Header().Del("Content-Length")
+	proxy.FlushInterval = -1
+	proxy.ModifyResponse = app.modifyResponse
+	proxy.Transport = app.transport
 
-	w.WriteHeader(resp.StatusCode)
+	app.logger.Debugf("sending request %+v", r)
 
-	_, err = w.Write(body)
-	if err != nil {
-		app.logError(w, fmt.Errorf("error on writing body to ResponseWriter: %w", err), false, http.StatusInternalServerError)
-		return
-	}
+	// set a custom timeout
+	ctx, cancel := context.WithTimeout(r.Context(), app.timeout)
+	defer cancel()
+	r = r.WithContext(ctx)
+	proxy.ServeHTTP(w, r)
 }
 
 func (app *application) xHeaderMiddleware(next http.Handler) http.Handler {
