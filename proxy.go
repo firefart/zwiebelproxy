@@ -97,10 +97,14 @@ func (app *application) modifyResponse(resp *http.Response) error {
 		"text/html",
 		"text/css",
 		"text/javascript",
+		"text/xml",
 		"application/javascript",
 		"application/json",
 		"application/ld+json",
+		"application/xml",
 		"application/rss+xml",
+		"application/atom+xml",
+		"application/rdf+xml",
 	}
 
 	contentType, ok := resp.Header["Content-Type"]
