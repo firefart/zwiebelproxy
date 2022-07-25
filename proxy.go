@@ -18,7 +18,12 @@ func (app *application) director(r *http.Request) {
 		port = r.URL.Port()
 	}
 
-	host = strings.TrimSuffix(host, app.domain)
+	domain := app.domain
+	if !strings.HasPrefix(domain, ".") {
+		domain = fmt.Sprintf(".%s", domain)
+	}
+
+	host = strings.TrimSuffix(host, domain)
 	host = strings.TrimSuffix(host, ".")
 	host = fmt.Sprintf("%s.onion", host)
 	if port != "" && port != "80" && port != "443" {
@@ -63,12 +68,17 @@ func (app *application) director(r *http.Request) {
 func (app *application) modifyResponse(resp *http.Response) error {
 	app.logger.Debugf("entered modifyResponse for %s with status %d", sanitizeString(resp.Request.URL.String()), resp.StatusCode)
 
+	domain := app.domain
+	if !strings.HasPrefix(domain, ".") {
+		domain = fmt.Sprintf(".%s", domain)
+	}
+
 	app.logger.Debugf("Header: %#v", resp.Header)
 	for k, v := range resp.Header {
-		k = strings.ReplaceAll(k, ".onion", app.domain)
+		k = strings.ReplaceAll(k, ".onion", domain)
 		resp.Header[k] = []string{}
 		for _, v2 := range v {
-			v2 = strings.ReplaceAll(v2, ".onion", app.domain)
+			v2 = strings.ReplaceAll(v2, ".onion", domain)
 			resp.Header[k] = append(resp.Header[k], v2)
 		}
 	}
@@ -90,6 +100,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 		"application/javascript",
 		"application/json",
 		"application/ld+json",
+		"application/rss+xml",
 	}
 
 	contentType, ok := resp.Header["Content-Type"]
@@ -116,7 +127,9 @@ func (app *application) modifyResponse(resp *http.Response) error {
 	}
 	app.logger.Debugf("%s: Got a %d body len", sanitizeString(resp.Request.URL.String()), len(body))
 	// replace stuff for domain replacement
-	body = bytes.ReplaceAll(body, []byte(`.onion"`), []byte(fmt.Sprintf(`%s"`, app.domain)))
+	body = bytes.ReplaceAll(body, []byte(".onion/"), []byte(fmt.Sprintf("%s/", domain)))
+	body = bytes.ReplaceAll(body, []byte(`.onion"`), []byte(fmt.Sprintf(`%s"`, domain)))
+	body = bytes.ReplaceAll(body, []byte(".onion<"), []byte(fmt.Sprintf("%s<", domain)))
 
 	// body can be read only once so recreate a new reader
 	resp.Body = io.NopCloser(bytes.NewBuffer(body))
