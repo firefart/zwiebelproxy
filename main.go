@@ -74,6 +74,7 @@ func main() {
 	tr.TLSHandshakeTimeout = *timeout
 	tr.ExpectContinueTimeout = *timeout
 	tr.ResponseHeaderTimeout = *timeout
+
 	tr.DialContext = (&net.Dialer{
 		Timeout:   *timeout,
 		KeepAlive: *timeout,
@@ -118,8 +119,6 @@ func (app *application) routes() http.Handler {
 	r.Use(middleware.Logger)
 	r.Use(app.xHeaderMiddleware)
 	r.Use(middleware.Recoverer)
-
-	r.Use(middleware.Timeout(app.timeout))
 
 	ph := http.HandlerFunc(app.proxyHandler)
 	r.Handle("/*", ph)
