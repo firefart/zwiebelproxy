@@ -32,8 +32,13 @@ server {
     break;
   }
 
+  # uncomment and adapt for ip based ACLs
+  # allow 8.8.8.8/32;
+  # allow 10.0.0.0/8;
+  # deny all;
+
   location / {
-    proxy_read_timeout 5m;
+    proxy_read_timeout 5m; # this needs to be equal or higher than your configured timeout
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-Port $server_port;
@@ -60,8 +65,13 @@ server {
     break;
   }
 
+  # uncomment and adapt for ip based ACLs
+  # allow 8.8.8.8/32;
+  # allow 10.0.0.0/8;
+  # deny all;
+
   location / {
-    proxy_read_timeout 5m;
+    proxy_read_timeout 5m; # this needs to be equal or higher than your configured timeout
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-Port $server_port;
@@ -91,7 +101,9 @@ server {
     break;
   }
 
-  location = /auth {
+  location = /zwiebelproxy_auth {
+    # only allow local requests to the auth endpoint
+    # change if needed
     allow 127.0.0.0/8;
     allow 10.0.0.0/8;
     allow 172.16.0.0/12;
@@ -106,8 +118,8 @@ server {
   }
 
   location / {
-    auth_request /auth;
-    proxy_read_timeout 5m;
+    auth_request /zwiebelproxy_auth;
+    proxy_read_timeout 5m; # this needs to be equal or higher than your configured timeout
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-Port $server_port;
@@ -134,7 +146,9 @@ server {
     break;
   }
 
-  location = /auth {
+  location = /zwiebelproxy_auth {
+    # only allow local requests to the auth endpoint
+    # change if needed
     allow 127.0.0.0/8;
     allow 10.0.0.0/8;
     allow 172.16.0.0/12;
@@ -149,8 +163,8 @@ server {
   }
 
   location / {
-    auth_request /auth;
-    proxy_read_timeout 5m;
+    auth_request /zwiebelproxy_auth;
+    proxy_read_timeout 5m; # this needs to be equal or higher than your configured timeout
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-Port $server_port;
