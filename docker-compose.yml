@@ -5,7 +5,10 @@ services:
       context: .
       dockerfile: Dockerfiles/Dockerfile.tor
     ports:
-      - 9050
+      - target: 9050
+        host_ip: 127.0.0.1
+        protocol: tcp
+        mode: host
     deploy:
       mode: replicated
       replicas: 5
