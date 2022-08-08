@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfiles/Dockerfile.tor
+    ports:
+      - 9050
     deploy:
       mode: replicated
       replicas: 5
