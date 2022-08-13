@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"math/rand"
 	"os"
 	"strconv"
@@ -53,9 +55,9 @@ func lookupEnvOrDuration(log Logger, key string, defaultVal time.Duration) time.
 	return defaultVal
 }
 
-func sliceContains[T comparable](slice []T, value T) bool {
+func sliceContains(slice []string, value string) bool {
 	for _, item := range slice {
-		if item == value {
+		if strings.EqualFold(item, value) {
 			return true
 		}
 	}
@@ -66,4 +68,24 @@ func sanitizeString(in string) string {
 	escaped := strings.Replace(in, "\n", "", -1)
 	escaped = strings.Replace(escaped, "\r", "", -1)
 	return escaped
+}
+
+func gzipInput(data []byte) ([]byte, error) {
+	var b bytes.Buffer
+	gz := gzip.NewWriter(&b)
+
+	_, err := gz.Write(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = gz.Flush(); err != nil {
+		return nil, err
+	}
+
+	if err = gz.Close(); err != nil {
+		return nil, err
+	}
+
+	return b.Bytes(), nil
 }

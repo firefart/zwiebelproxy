@@ -103,8 +103,8 @@ func TestDirectorWebRequest(t *testing.T) {
 func TestModifyResponse(t *testing.T) {
 	t.Parallel()
 
-	const domain = "onion.zwiebel"
-	body := []byte(fmt.Sprintf("asfasdf najngkjsdngsdngskjgnskjngdfg.%s safdsdfa ", domain))
+	const domain = "xxx.zwiebel"
+	body := []byte("asfasdf najngkjsdngsdngskjgnskjngdfg.onion safdsdfa akjfajfklf.onion/asdfasf")
 	tests := []struct {
 		name        string
 		download    bool

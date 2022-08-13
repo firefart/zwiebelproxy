@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"net"
@@ -124,19 +125,45 @@ func (app *application) modifyResponse(resp *http.Response) error {
 
 	app.logger.Debugf("%s - found content type %s, replacing strings", sanitizeString(resp.Request.URL.String()), contentType[0])
 
+	reader := resp.Body
+	usedGzip := false
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
+	if strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
+		app.logger.Debugf("%s - detected gzipped body", sanitizeString(resp.Request.URL.String()))
+		var err error
+		reader, err = gzip.NewReader(resp.Body)
+		if err != nil {
+			return fmt.Errorf("could not create gzip reader: %w", err)
+		}
+		// resp.Header.Del("Content-Encoding")
+		usedGzip = true
+	}
+
 	// for all other content replace .onion urls with our custom domain
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(reader)
 	if err != nil {
 		return fmt.Errorf("error on reading body: %w", err)
 	}
+
 	app.logger.Debugf("%s: Got a %d body len", sanitizeString(resp.Request.URL.String()), len(body))
 	// replace stuff for domain replacement
 	body = bytes.ReplaceAll(body, []byte(".onion/"), []byte(fmt.Sprintf("%s/", domain)))
 	body = bytes.ReplaceAll(body, []byte(`.onion"`), []byte(fmt.Sprintf(`%s"`, domain)))
 	body = bytes.ReplaceAll(body, []byte(".onion<"), []byte(fmt.Sprintf("%s<", domain)))
 
+	// if we unpacked before, respect the client and repack the modified body (the header is still set)
+	if usedGzip {
+		app.logger.Debugf("%s - re gzipping body", sanitizeString(resp.Request.URL.String()))
+		gzipped, err := gzipInput(body)
+		if err != nil {
+			return fmt.Errorf("could not gzip body: %w", err)
+		}
+		body = gzipped
+	}
+
 	// body can be read only once so recreate a new reader
 	resp.Body = io.NopCloser(bytes.NewBuffer(body))
+
 	// update the content-length to our new body
 	resp.Header["Content-Length"] = []string{fmt.Sprint(len(body))}
 	return nil
