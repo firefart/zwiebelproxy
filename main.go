@@ -134,7 +134,8 @@ func (app *application) routes() http.Handler {
 	return r
 }
 
-func (app *application) logError(w http.ResponseWriter, err error) {
+func (app *application) logError(w http.ResponseWriter, err error, statusCode int) {
+	w.WriteHeader(statusCode)
 	w.Header().Set("Connection", "close")
 	errorText := fmt.Sprintf("%v", err)
 	app.logger.Error(errorText)
@@ -165,7 +166,7 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !strings.HasSuffix(host, app.domain) {
-		app.logError(w, fmt.Errorf("invalid domain %s called. The domain needs to end in %s", host, app.domain))
+		app.logError(w, fmt.Errorf("invalid domain %s called. The domain needs to end in %s", host, app.domain), http.StatusBadRequest)
 		return
 	}
 

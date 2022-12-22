@@ -67,7 +67,7 @@ func (app *application) director(r *http.Request) {
 
 // modify the response
 func (app *application) proxyErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
-	app.logError(w, err)
+	app.logError(w, err, http.StatusBadGateway)
 }
 
 // modify the response
