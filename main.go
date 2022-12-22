@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"embed"
 	"flag"
 	"fmt"
 	"net"
@@ -13,6 +14,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"text/template"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -26,7 +28,13 @@ type application struct {
 	domain    string
 	timeout   time.Duration
 	logger    Logger
+	templates *template.Template
 }
+
+var (
+	//go:embed templates
+	templateFS embed.FS
+)
 
 func main() {
 	log := logrus.New()
@@ -85,6 +93,7 @@ func main() {
 		domain:    *domain,
 		timeout:   *timeout,
 		logger:    log,
+		templates: template.Must(template.ParseFS(templateFS, "templates/*.tmpl")),
 	}
 
 	srv := &http.Server{
@@ -125,11 +134,20 @@ func (app *application) routes() http.Handler {
 	return r
 }
 
-func (app *application) logError(w http.ResponseWriter, err error, status int) {
+func (app *application) logError(w http.ResponseWriter, err error) {
 	w.Header().Set("Connection", "close")
 	errorText := fmt.Sprintf("%v", err)
 	app.logger.Error(errorText)
-	http.Error(w, http.StatusText(status), status)
+
+	data := struct {
+		Error string
+	}{
+		Error: errorText,
+	}
+	if err2 := app.templates.ExecuteTemplate(w, "default.tmpl", data); err2 != nil {
+		app.logger.Error(err2)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
 }
 
 func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
@@ -139,8 +157,15 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 		host = r.Host
 	}
 
+	if host == strings.TrimLeft(app.domain, ".") {
+		if err := app.templates.ExecuteTemplate(w, "default.tmpl", nil); err != nil {
+			panic(fmt.Sprintf("error on executing template: %v", err))
+		}
+		return
+	}
+
 	if !strings.HasSuffix(host, app.domain) {
-		app.logError(w, fmt.Errorf("invalid domain %s", host), http.StatusBadRequest)
+		app.logError(w, fmt.Errorf("invalid domain %s called. The domain needs to end in %s", host, app.domain))
 		return
 	}
 
@@ -151,6 +176,7 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 	proxy.FlushInterval = -1
 	proxy.ModifyResponse = app.modifyResponse
 	proxy.Transport = app.transport
+	proxy.ErrorHandler = app.proxyErrorHandler
 
 	app.logger.Debugf("sending request %+v", r)
 

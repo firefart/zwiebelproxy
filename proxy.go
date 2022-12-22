@@ -66,6 +66,11 @@ func (app *application) director(r *http.Request) {
 }
 
 // modify the response
+func (app *application) proxyErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
+	app.logError(w, err)
+}
+
+// modify the response
 func (app *application) modifyResponse(resp *http.Response) error {
 	app.logger.Debugf("entered modifyResponse for %s with status %d", sanitizeString(resp.Request.URL.String()), resp.StatusCode)
 
