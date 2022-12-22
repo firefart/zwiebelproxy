@@ -3,7 +3,7 @@ WORKDIR /src
 ENV CGO_ENABLED=0
 COPY go.* .
 RUN go mod download
-COPY *.go .
+COPY . .
 RUN go build -a -o zwiebelproxy -ldflags="-s -w" -trimpath
 
 FROM alpine:latest
