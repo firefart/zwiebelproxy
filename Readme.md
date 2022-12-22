@@ -4,7 +4,11 @@ this is a small setup to access TOR services via a custom domain like the `tor2w
 
 Once the server receives an request it will check the domain and then forward it to the tor network and returns the reponse. This way you can setup some kind of a proxy into the tor network.
 
-## Instructions
+## DNS setup
+
+Create an `*.onion.tld` CNAME record pointing to your server. Additionally you can also create a `onion.tld` CNAME pointing to the same server to see a nice page when calling `onion.tld` in the browser.
+
+## local instructions
 
 create a `.env` file with the required env variables or supply the parameters. View the `--help` for more information.
 
