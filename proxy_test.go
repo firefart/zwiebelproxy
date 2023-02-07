@@ -47,7 +47,7 @@ func TestRewrite(t *testing.T) {
 			}
 			app.rewrite(pr)
 			assert.Empty(t, pr.Out.Header.Get("X-Forwarded-For"))
-			assert.Equal(t, tt.expectedHost, pr.Out.Host)
+			assert.Empty(t, pr.Out.Host)
 			assert.Equal(t, tt.expectedScheme, pr.Out.URL.Scheme)
 			assert.Equal(t, tt.expectedHost, pr.Out.URL.Host)
 			assert.Equal(t, tt.expectedPort, pr.Out.URL.Port())
@@ -101,7 +101,7 @@ func TestRewriteWebRequest(t *testing.T) {
 			}
 			app.rewrite(pr)
 			assert.Empty(t, pr.Out.Header.Get("X-Forwarded-For"))
-			assert.Equal(t, tt.expectedHost, pr.Out.Host)
+			assert.Empty(t, pr.Out.Host)
 			assert.Equal(t, tt.expectedScheme, pr.Out.URL.Scheme)
 			assert.Equal(t, tt.expectedHost, pr.Out.URL.Host)
 			assert.Equal(t, tt.expectedPort, pr.Out.URL.Port())
