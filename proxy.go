@@ -45,13 +45,8 @@ func (app *application) rewrite(r *httputil.ProxyRequest) {
 		}
 	}
 
-	u := *r.In.URL // URL is a pointer so make sure we do not modify it
-	u.Host = host
-	u.Scheme = scheme
-
-	app.logger.Debugf("rewriting url from %s with host %s to %s", r.In.URL, r.In.Host, u.String())
-
-	r.SetURL(&u)
+	r.Out.Host = host
+	r.Out.URL.Scheme = scheme
 
 	app.logger.Debugf("modified request: %+v", r.Out)
 }
