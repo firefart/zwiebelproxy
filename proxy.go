@@ -7,21 +7,21 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"strings"
 )
 
-// modify the request
-func (app *application) director(r *http.Request) {
-	host, port, err := net.SplitHostPort(r.Host)
-	if err != nil {
-		// no port present
-		host = r.Host
-		port = r.URL.Port()
-	}
-
+func (app *application) rewrite(r *httputil.ProxyRequest) {
 	domain := app.domain
 	if !strings.HasPrefix(domain, ".") {
 		domain = fmt.Sprintf(".%s", domain)
+	}
+
+	host, port, err := net.SplitHostPort(r.In.Host)
+	if err != nil {
+		// no port present
+		host = r.In.Host
+		port = r.In.URL.Port()
 	}
 
 	host = strings.TrimSuffix(host, domain)
@@ -31,7 +31,7 @@ func (app *application) director(r *http.Request) {
 		host = net.JoinHostPort(host, port)
 	}
 
-	scheme := r.URL.Scheme
+	scheme := r.In.URL.Scheme
 	if scheme == "" {
 		switch port {
 		case "":
@@ -45,24 +45,13 @@ func (app *application) director(r *http.Request) {
 		}
 	}
 
-	app.logger.Debugf("r.port: %#v", sanitizeString(fmt.Sprintf("%#v", port)))
-	app.logger.Debugf("r.URL: %#v", sanitizeString(fmt.Sprintf("%#v", r.URL)))
-	app.logger.Debugf("r.RequestURI: %#v", sanitizeString(fmt.Sprintf("%#v", r.RequestURI)))
-	app.logger.Debugf("r.Host: %#v", sanitizeString(fmt.Sprintf("%#v", r.Host)))
-	app.logger.Debugf("r.Header: %#v", sanitizeString(fmt.Sprintf("%#v", r.Header)))
+	u := *r.In.URL // URL is a pointer so make sure we do not modify it
+	u.Host = host
+	u.Scheme = scheme
 
-	// needed so the ip will not be leaked
-	r.Header["X-Forwarded-For"] = nil
+	app.logger.Debugf("rewriting url from %s%s to %s", r.In.Host, r.In.URL, u.String())
 
-	r.URL.Scheme = scheme
-	r.URL.Host = host
-	r.Host = host
-
-	app.logger.Debugf("r.port: %#v", sanitizeString(fmt.Sprintf("%#v", port)))
-	app.logger.Debugf("r.URL: %#v", sanitizeString(fmt.Sprintf("%#v", r.URL)))
-	app.logger.Debugf("r.RequestURI: %#v", sanitizeString(fmt.Sprintf("%#v", r.RequestURI)))
-	app.logger.Debugf("r.Host: %#v", sanitizeString(fmt.Sprintf("%#v", r.Host)))
-	app.logger.Debugf("r.Header: %#v", sanitizeString(fmt.Sprintf("%#v", r.Header)))
+	r.SetURL(&u)
 }
 
 // modify the response

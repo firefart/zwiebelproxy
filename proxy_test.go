@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDirector(t *testing.T) {
+func TestRewrite(t *testing.T) {
 	t.Parallel()
 
 	const domain = "onion.zwiebel"
@@ -40,17 +41,21 @@ func TestDirector(t *testing.T) {
 				domain: domain,
 				logger: &DiscardLogger{},
 			}
-			app.director(r)
-			assert.Empty(t, r.Header.Get("X-Forwarded-For"))
-			assert.Equal(t, tt.expectedHost, r.Host)
-			assert.Equal(t, tt.expectedScheme, r.URL.Scheme)
-			assert.Equal(t, tt.expectedHost, r.URL.Host)
-			assert.Equal(t, tt.expectedPort, r.URL.Port())
+			pr := &httputil.ProxyRequest{
+				In:  r,
+				Out: r.Clone(r.Context()),
+			}
+			app.rewrite(pr)
+			assert.Empty(t, pr.Out.Header.Get("X-Forwarded-For"))
+			assert.Empty(t, pr.Out.Host)
+			assert.Equal(t, tt.expectedScheme, pr.Out.URL.Scheme)
+			assert.Equal(t, tt.expectedHost, pr.Out.URL.Host)
+			assert.Equal(t, tt.expectedPort, pr.Out.URL.Port())
 		})
 	}
 }
 
-func TestDirectorWebRequest(t *testing.T) {
+func TestRewriteWebRequest(t *testing.T) {
 	t.Parallel()
 
 	const domain = "onion.zwiebel"
@@ -90,12 +95,16 @@ func TestDirectorWebRequest(t *testing.T) {
 				domain: domain,
 				logger: &DiscardLogger{},
 			}
-			app.director(r)
-			assert.Empty(t, r.Header.Get("X-Forwarded-For"))
-			assert.Equal(t, tt.expectedHost, r.Host)
-			assert.Equal(t, tt.expectedScheme, r.URL.Scheme)
-			assert.Equal(t, tt.expectedHost, r.URL.Host)
-			assert.Equal(t, tt.expectedPort, r.URL.Port())
+			pr := &httputil.ProxyRequest{
+				In:  r,
+				Out: r.Clone(r.Context()),
+			}
+			app.rewrite(pr)
+			assert.Empty(t, pr.Out.Header.Get("X-Forwarded-For"))
+			assert.Empty(t, pr.Out.Host)
+			assert.Equal(t, tt.expectedScheme, pr.Out.URL.Scheme)
+			assert.Equal(t, tt.expectedHost, pr.Out.URL.Host)
+			assert.Equal(t, tt.expectedPort, pr.Out.URL.Port())
 		})
 	}
 }

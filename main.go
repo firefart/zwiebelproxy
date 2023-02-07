@@ -171,13 +171,12 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	proxy := httputil.ReverseProxy{
-		Director: app.director,
+		Rewrite:        app.rewrite,
+		FlushInterval:  -1,
+		ModifyResponse: app.modifyResponse,
+		Transport:      app.transport,
+		ErrorHandler:   app.proxyErrorHandler,
 	}
-
-	proxy.FlushInterval = -1
-	proxy.ModifyResponse = app.modifyResponse
-	proxy.Transport = app.transport
-	proxy.ErrorHandler = app.proxyErrorHandler
 
 	app.logger.Debugf("sending request %+v", r)
 
