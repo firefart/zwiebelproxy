@@ -43,6 +43,7 @@ server {
 
   location / {
     proxy_read_timeout 5m; # this needs to be equal or higher than your configured timeout
+    proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-Port $server_port;
@@ -76,6 +77,7 @@ server {
 
   location / {
     proxy_read_timeout 5m; # this needs to be equal or higher than your configured timeout
+    proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-Port $server_port;
@@ -124,6 +126,7 @@ server {
   location / {
     auth_request /zwiebelproxy_auth;
     proxy_read_timeout 5m; # this needs to be equal or higher than your configured timeout
+    proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-Port $server_port;
@@ -169,6 +172,7 @@ server {
   location / {
     auth_request /zwiebelproxy_auth;
     proxy_read_timeout 5m; # this needs to be equal or higher than your configured timeout
+    proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-Port $server_port;
