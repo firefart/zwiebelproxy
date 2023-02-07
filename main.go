@@ -178,7 +178,7 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 		ErrorHandler:   app.proxyErrorHandler,
 	}
 
-	app.logger.Debugf("sending request %+v", r)
+	app.logger.Debugf("original request: %+v", r)
 
 	// set a custom timeout
 	ctx, cancel := context.WithTimeout(r.Context(), app.timeout)
