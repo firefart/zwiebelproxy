@@ -47,6 +47,7 @@ func (app *application) rewrite(r *httputil.ProxyRequest) {
 
 	r.Out.Host = host
 	r.Out.URL.Scheme = scheme
+	r.Out.URL.Host = host
 
 	app.logger.Debugf("modified request: %+v", r.Out)
 }
