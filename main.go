@@ -158,6 +158,7 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 		host = r.Host
 	}
 
+	// show info page when top domain is called
 	if host == strings.TrimLeft(app.domain, ".") {
 		if err := app.templates.ExecuteTemplate(w, "default.tmpl", nil); err != nil {
 			panic(fmt.Sprintf("error on executing template: %v", err))
