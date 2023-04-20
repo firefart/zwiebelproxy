@@ -14,9 +14,10 @@ services:
       replicas: 5
       resources:
         limits:
-          cpus: 0.50
+          cpus: '0.50'
           memory: 80M
         reservations:
+          cpus: '0.25'
           memory: 30M
     restart: unless-stopped
     networks:
