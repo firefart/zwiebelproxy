@@ -11,7 +11,7 @@ services:
         mode: host
     deploy:
       mode: replicated
-      replicas: 5
+      replicas: ${ZWIEBELPROXY_REPLICAS:-5}
       resources:
         limits:
           cpus: '0.50'
