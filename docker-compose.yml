@@ -12,6 +12,12 @@ services:
     deploy:
       mode: replicated
       replicas: 5
+      resources:
+        limits:
+          cpus: 0.50
+          memory: 80M
+        reservations:
+          memory: 30M
     restart: unless-stopped
     networks:
       - tor
