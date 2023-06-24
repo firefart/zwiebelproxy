@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"embed"
+	"errors"
 	"flag"
 	"fmt"
 	"net"
@@ -50,6 +52,14 @@ func main() {
 		log.Warnf("could not load .env file: %v. continuing without", err)
 	}
 
+	if err := run(log); err != nil {
+		log.Error(err)
+		os.Exit(1)
+	}
+	os.Exit(0)
+}
+
+func run(log *logrus.Logger) error {
 	host := flag.String("host", lookupEnvOrString(log, "ZWIEBEL_HOST", "127.0.0.1:8080"), "IP and Port to bind to. You can also use the ZWIEBEL_HOST environment variable or an entry in the .env file to set this parameter.")
 	debug := flag.Bool("debug", lookupEnvOrBool(log, "ZWIEBEL_DEBUG", false), "Enable DEBUG mode. You can also use the ZWIEBEL_DEBUG environment variable or an entry in the .env file to set this parameter.")
 	domain := flag.String("domain", lookupEnvOrString(log, "ZWIEBEL_DOMAIN", ""), "domain to use. You can also use the ZWIEBEL_DOMAIN environment variable or an entry in the .env file to set this parameter.")
@@ -61,6 +71,9 @@ func main() {
 	xForwardedFor := flag.Bool("x-forwarded-for", lookupEnvOrBool(log, "ZWIEBEL_X_FORWARDED-FOR", false), "Use X-Forwarded-For Header to get real client ip. Only set it behind a reverse proxy, otherwise the IP Access check can easily be bypassed.")
 	allowedIPs := flag.String("allowed-ips", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_IPS", ""), "if set, only the specified IPs are allowed. Split multiple IPs by comma. If empty, all IPs are allowed.")
 	allowedHosts := flag.String("allowed-hosts", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_HOSTS", ""), "if set, only the specified hosts are allowed. A reverse lookup for the host is done to compare the request ip with the dns value. This way you can allow DynDNS domains for dynamic IPs. Supply multiple values seperated by comma. If empty, all IPs are allowed.")
+	publicKeyFile := flag.String("public-key", lookupEnvOrString(log, "ZWIEBEL_PUBLIC_KEY", ""), "TLS public key to use. Leave empty for plain http.")
+	privateKeyFile := flag.String("private-key", lookupEnvOrString(log, "ZWIEBEL_PRIVATE_KEY", ""), "TLS private key to use. Leave empty for plain http.")
+	rootCA := flag.String("root-ca", lookupEnvOrString(log, "ZWIEBEL_ROOT_CA", ""), "require all connections to present a client cert from the following root ca. Can be used for cloudflare authenticated origin pulls.")
 	flag.Parse()
 
 	if *debug {
@@ -69,8 +82,7 @@ func main() {
 	}
 
 	if len(*domain) == 0 {
-		log.Errorf("please provide a domain")
-		os.Exit(1)
+		return fmt.Errorf("please provide a domain")
 	}
 
 	if !strings.HasPrefix(*domain, ".") {
@@ -80,8 +92,7 @@ func main() {
 
 	torProxyURL, err := url.Parse(*tor)
 	if err != nil {
-		log.Errorf("invalid proxy url %s: %v", *tor, err)
-		os.Exit(1)
+		return fmt.Errorf("invalid proxy url %s: %v", *tor, err)
 	}
 
 	// used to clone the default transport
@@ -109,6 +120,27 @@ func main() {
 		allowedHosts:  DeleteEmptyItems(strings.Split(*allowedHosts, ",")),
 	}
 
+	useTLS := false
+	if *publicKeyFile != "" && *privateKeyFile != "" {
+		useTLS = true
+	}
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS13}
+
+	if *rootCA != "" {
+		caCertPEM, err := os.ReadFile(*rootCA)
+		if err != nil {
+			return err
+		}
+		roots := x509.NewCertPool()
+		ok := roots.AppendCertsFromPEM(caCertPEM)
+		if !ok {
+			return fmt.Errorf("failed to parse root certificate")
+		}
+
+		tlsConfig.ClientCAs = roots
+		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+	}
+
 	srv := &http.Server{
 		Addr:    *host,
 		Handler: app.routes(),
@@ -116,8 +148,22 @@ func main() {
 	log.Infof("Starting server on %s", *host)
 
 	go func() {
+		if useTLS {
+			if err := srv.ListenAndServeTLS(*publicKeyFile, *privateKeyFile); err != nil {
+				// not interested in server closed messages
+				if !errors.Is(err, http.ErrServerClosed) {
+					app.logger.Error(err)
+					app.logger.Debugf("%#v", err)
+				}
+			}
+			return
+		}
 		if err := srv.ListenAndServe(); err != nil {
-			log.Error(err)
+			// not interested in server closed messages
+			if !errors.Is(err, http.ErrServerClosed) {
+				app.logger.Error(err)
+				app.logger.Debugf("%#v", err)
+			}
 		}
 	}()
 
@@ -127,10 +173,10 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), *wait)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Error(err)
+		return err
 	}
 	log.Info("shutting down")
-	os.Exit(0)
+	return nil
 }
 
 func (app *application) routes() http.Handler {
