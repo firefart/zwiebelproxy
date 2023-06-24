@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"embed"
 	"errors"
 	"flag"
@@ -60,7 +59,9 @@ func main() {
 }
 
 func run(log *logrus.Logger) error {
-	host := flag.String("host", lookupEnvOrString(log, "ZWIEBEL_HOST", "127.0.0.1:8080"), "IP and Port to bind to. You can also use the ZWIEBEL_HOST environment variable or an entry in the .env file to set this parameter.")
+	host := flag.String("host", lookupEnvOrString(log, "ZWIEBEL_HOST", "127.0.0.1"), "IP to bind to. You can also use the ZWIEBEL_HOST environment variable or an entry in the .env file to set this parameter.")
+	httpPort := flag.String("http-port", lookupEnvOrString(log, "ZWIEBEL_HTTP_PORT", "80"), "HTTP port to use")
+	httpsPort := flag.String("https-port", lookupEnvOrString(log, "ZWIEBEL_HTTPS_PORT", "80"), "HTTPS port to use")
 	debug := flag.Bool("debug", lookupEnvOrBool(log, "ZWIEBEL_DEBUG", false), "Enable DEBUG mode. You can also use the ZWIEBEL_DEBUG environment variable or an entry in the .env file to set this parameter.")
 	domain := flag.String("domain", lookupEnvOrString(log, "ZWIEBEL_DOMAIN", ""), "domain to use. You can also use the ZWIEBEL_DOMAIN environment variable or an entry in the .env file to set this parameter.")
 	tor := flag.String("tor", lookupEnvOrString(log, "ZWIEBEL_TOR", "socks5://127.0.0.1:9050"), "TOR Proxy server. You can also use the ZWIEBEL_TOR environment variable or an entry in the .env file to set this parameter.")
@@ -71,9 +72,8 @@ func run(log *logrus.Logger) error {
 	xForwardedFor := flag.Bool("x-forwarded-for", lookupEnvOrBool(log, "ZWIEBEL_X_FORWARDED_FOR", false), "Use X-Forwarded-For Header to get real client ip. Only set it behind a reverse proxy, otherwise the IP Access check can easily be bypassed.")
 	allowedIPs := flag.String("allowed-ips", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_IPS", ""), "if set, only the specified IPs are allowed. Split multiple IPs by comma. If empty, all IPs are allowed.")
 	allowedHosts := flag.String("allowed-hosts", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_HOSTS", ""), "if set, only the specified hosts are allowed. A reverse lookup for the host is done to compare the request ip with the dns value. This way you can allow DynDNS domains for dynamic IPs. Supply multiple values seperated by comma. If empty, all IPs are allowed.")
-	publicKeyFile := flag.String("public-key", lookupEnvOrString(log, "ZWIEBEL_PUBLIC_KEY", ""), "TLS public key to use. Leave empty for plain http.")
-	privateKeyFile := flag.String("private-key", lookupEnvOrString(log, "ZWIEBEL_PRIVATE_KEY", ""), "TLS private key to use. Leave empty for plain http.")
-	rootCA := flag.String("root-ca", lookupEnvOrString(log, "ZWIEBEL_ROOT_CA", ""), "require all connections to present a client cert from the following root ca. Can be used for cloudflare authenticated origin pulls.")
+	publicKeyFile := flag.String("public-key", lookupEnvOrString(log, "ZWIEBEL_PUBLIC_KEY", ""), "TLS public key to use")
+	privateKeyFile := flag.String("private-key", lookupEnvOrString(log, "ZWIEBEL_PRIVATE_KEY", ""), "TLS private key to use")
 	flag.Parse()
 
 	if *debug {
@@ -120,45 +120,18 @@ func run(log *logrus.Logger) error {
 		allowedHosts:  DeleteEmptyItems(strings.Split(*allowedHosts, ",")),
 	}
 
-	useTLS := false
-	if *publicKeyFile != "" && *privateKeyFile != "" {
-		useTLS = true
-	}
-	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS13}
-
-	if *rootCA != "" {
-		caCertPEM, err := os.ReadFile(*rootCA)
-		if err != nil {
-			return err
-		}
-		roots := x509.NewCertPool()
-		ok := roots.AppendCertsFromPEM(caCertPEM)
-		if !ok {
-			return fmt.Errorf("failed to parse root certificate")
-		}
-
-		tlsConfig.ClientCAs = roots
-		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
-	}
-
-	srv := &http.Server{
-		Addr:    *host,
+	httpSrv := &http.Server{
+		Addr:    net.JoinHostPort(*host, *httpPort),
 		Handler: app.routes(),
 	}
-	log.Infof("Starting server on %s", *host)
+	httpsSrv := &http.Server{
+		Addr:    net.JoinHostPort(*host, *httpsPort),
+		Handler: app.routes(),
+	}
+	log.Infof("Starting server on %s and %s", httpSrv.Addr, httpSrv.Addr)
 
 	go func() {
-		if useTLS {
-			if err := srv.ListenAndServeTLS(*publicKeyFile, *privateKeyFile); err != nil {
-				// not interested in server closed messages
-				if !errors.Is(err, http.ErrServerClosed) {
-					app.logger.Error(err)
-					app.logger.Debugf("%#v", err)
-				}
-			}
-			return
-		}
-		if err := srv.ListenAndServe(); err != nil {
+		if err := httpSrv.ListenAndServe(); err != nil {
 			// not interested in server closed messages
 			if !errors.Is(err, http.ErrServerClosed) {
 				app.logger.Error(err)
@@ -167,12 +140,26 @@ func run(log *logrus.Logger) error {
 		}
 	}()
 
+	go func() {
+		if err := httpsSrv.ListenAndServeTLS(*publicKeyFile, *privateKeyFile); err != nil {
+			// not interested in server closed messages
+			if !errors.Is(err, http.ErrServerClosed) {
+				app.logger.Error(err)
+				app.logger.Debugf("%#v", err)
+			}
+		}
+		return
+	}()
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT)
 	<-c
 	ctx, cancel := context.WithTimeout(context.Background(), *wait)
 	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := httpSrv.Shutdown(ctx); err != nil {
+		return err
+	}
+	if err := httpsSrv.Shutdown(ctx); err != nil {
 		return err
 	}
 	log.Info("shutting down")
