@@ -148,7 +148,6 @@ func run(log *logrus.Logger) error {
 				app.logger.Debugf("%#v", err)
 			}
 		}
-		return
 	}()
 
 	c := make(chan os.Signal, 1)
