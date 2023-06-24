@@ -134,7 +134,7 @@ func run(log *logrus.Logger) error {
 		if err := httpSrv.ListenAndServe(); err != nil {
 			// not interested in server closed messages
 			if !errors.Is(err, http.ErrServerClosed) {
-				app.logger.Error(err)
+				app.logger.Errorf("httpSrv Error: %v", err)
 				app.logger.Debugf("%#v", err)
 			}
 		}
@@ -144,7 +144,7 @@ func run(log *logrus.Logger) error {
 		if err := httpsSrv.ListenAndServeTLS(*publicKeyFile, *privateKeyFile); err != nil {
 			// not interested in server closed messages
 			if !errors.Is(err, http.ErrServerClosed) {
-				app.logger.Error(err)
+				app.logger.Errorf("httpsSrv Error: %v", err)
 				app.logger.Debugf("%#v", err)
 			}
 		}

@@ -31,7 +31,7 @@ services:
     env_file: .env
     volumes:
       - ./certs/:/certs:ro
-      - /etc/letsencrypt/live:/letsencrypt:ro
+      - /etc/letsencrypt:/letsencrypt:ro
     command: "--host 0.0.0.0 --tor socks5://tor:9050"
     depends_on:
       - tor
