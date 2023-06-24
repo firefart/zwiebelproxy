@@ -29,13 +29,16 @@ services:
       dockerfile: Dockerfiles/Dockerfile.zwiebelproxy
     restart: unless-stopped
     env_file: .env
-    command: "--host :8000 --tor socks5://tor:9050"
+    volumes:
+      - ./certs/:/certs:ro
+    command: "--tor socks5://tor:9050"
     depends_on:
       - tor
     networks:
       - tor
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:443:443"
 
 networks:
   tor: {}

@@ -68,7 +68,7 @@ func run(log *logrus.Logger) error {
 	timeout := flag.Duration("timeout", lookupEnvOrDuration(log, "ZWIEBEL_TIMEOUT", 5*time.Minute), "http timeout. You can also use the ZWIEBEL_TIMEOUT environment variable or an entry in the .env file to set this parameter.")
 	flag.Parse()
 	dnsCacheTimeout := flag.Duration("dns-timeout", lookupEnvOrDuration(log, "ZWIEBEL_DNS_TIMEOUT", 10*time.Minute), "timeout for the DNS cache. DNS entries are cached for this duration")
-	xForwardedFor := flag.Bool("x-forwarded-for", lookupEnvOrBool(log, "ZWIEBEL_X_FORWARDED-FOR", false), "Use X-Forwarded-For Header to get real client ip. Only set it behind a reverse proxy, otherwise the IP Access check can easily be bypassed.")
+	xForwardedFor := flag.Bool("x-forwarded-for", lookupEnvOrBool(log, "ZWIEBEL_X_FORWARDED_FOR", false), "Use X-Forwarded-For Header to get real client ip. Only set it behind a reverse proxy, otherwise the IP Access check can easily be bypassed.")
 	allowedIPs := flag.String("allowed-ips", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_IPS", ""), "if set, only the specified IPs are allowed. Split multiple IPs by comma. If empty, all IPs are allowed.")
 	allowedHosts := flag.String("allowed-hosts", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_HOSTS", ""), "if set, only the specified hosts are allowed. A reverse lookup for the host is done to compare the request ip with the dns value. This way you can allow DynDNS domains for dynamic IPs. Supply multiple values seperated by comma. If empty, all IPs are allowed.")
 	publicKeyFile := flag.String("public-key", lookupEnvOrString(log, "ZWIEBEL_PUBLIC_KEY", ""), "TLS public key to use. Leave empty for plain http.")
