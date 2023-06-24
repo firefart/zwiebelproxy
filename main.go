@@ -128,7 +128,7 @@ func run(log *logrus.Logger) error {
 		Addr:    net.JoinHostPort(*host, *httpsPort),
 		Handler: app.routes(),
 	}
-	log.Infof("Starting server on %s and %s", httpSrv.Addr, httpSrv.Addr)
+	log.Infof("Starting server on %s and %s", httpSrv.Addr, httpsSrv.Addr)
 
 	go func() {
 		if err := httpSrv.ListenAndServe(); err != nil {
