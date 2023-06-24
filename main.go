@@ -185,9 +185,9 @@ func (app *application) routes() http.Handler {
 	r.Use(middleware.RequestID)
 	if app.xForwardedFor {
 		r.Use(middleware.RealIP)
+		r.Use(app.xHeaderMiddleware)
 	}
 	r.Use(middleware.Logger)
-	r.Use(app.xHeaderMiddleware)
 	r.Use(app.ipAuthModdleware)
 	r.Use(middleware.Recoverer)
 

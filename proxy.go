@@ -44,6 +44,9 @@ func (app *application) rewrite(r *httputil.ProxyRequest) {
 			scheme = "http"
 		}
 	}
+	if r.In.TLS != nil {
+		scheme = "https"
+	}
 
 	r.Out.Host = host
 	r.Out.URL.Scheme = scheme
