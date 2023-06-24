@@ -20,7 +20,7 @@ build: test
 
 .PHONY: run
 run: build
-	./zwiebelproxy
+	./zwiebelproxy --host 127.0.0.1
 
 .PHONY: lint
 lint:

@@ -59,7 +59,7 @@ func main() {
 }
 
 func run(log *logrus.Logger) error {
-	host := flag.String("host", lookupEnvOrString(log, "ZWIEBEL_HOST", "127.0.0.1"), "IP to bind to. You can also use the ZWIEBEL_HOST environment variable or an entry in the .env file to set this parameter.")
+	host := flag.String("host", lookupEnvOrString(log, "ZWIEBEL_HOST", ""), "IP to bind to. You can also use the ZWIEBEL_HOST environment variable or an entry in the .env file to set this parameter.")
 	httpPort := flag.String("http-port", lookupEnvOrString(log, "ZWIEBEL_HTTP_PORT", "80"), "HTTP port to use")
 	httpsPort := flag.String("https-port", lookupEnvOrString(log, "ZWIEBEL_HTTPS_PORT", "80"), "HTTPS port to use")
 	debug := flag.Bool("debug", lookupEnvOrBool(log, "ZWIEBEL_DEBUG", false), "Enable DEBUG mode. You can also use the ZWIEBEL_DEBUG environment variable or an entry in the .env file to set this parameter.")
