@@ -20,7 +20,7 @@ build: test
 
 .PHONY: run
 run: build
-	./zwiebelproxy --host 127.0.0.1
+	./zwiebelproxy --host 127.0.0.1 --http-port 8080 --https-port 8443
 
 .PHONY: lint
 lint:
