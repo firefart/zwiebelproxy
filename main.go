@@ -24,11 +24,15 @@ import (
 )
 
 type application struct {
-	transport *http.Transport
-	domain    string
-	timeout   time.Duration
-	logger    Logger
-	templates *template.Template
+	xForwardedFor bool
+	allowedHosts  []string
+	allowedIPs    []string
+	transport     *http.Transport
+	domain        string
+	timeout       time.Duration
+	logger        Logger
+	templates     *template.Template
+	dnsClient     dnsClient
 }
 
 var (
@@ -52,6 +56,11 @@ func main() {
 	tor := flag.String("tor", lookupEnvOrString(log, "ZWIEBEL_TOR", "socks5://127.0.0.1:9050"), "TOR Proxy server. You can also use the ZWIEBEL_TOR environment variable or an entry in the .env file to set this parameter.")
 	wait := flag.Duration("graceful-timeout", lookupEnvOrDuration(log, "ZWIEBEL_GRACEFUL_TIMEOUT", 5*time.Second), "the duration for which the server gracefully wait for existing connections to finish - e.g. 15s or 1m. You can also use the ZWIEBEL_GRACEFUL_TIMEOUT environment variable or an entry in the .env file to set this parameter.")
 	timeout := flag.Duration("timeout", lookupEnvOrDuration(log, "ZWIEBEL_TIMEOUT", 5*time.Minute), "http timeout. You can also use the ZWIEBEL_TIMEOUT environment variable or an entry in the .env file to set this parameter.")
+	flag.Parse()
+	dnsCacheTimeout := flag.Duration("dns-timeout", lookupEnvOrDuration(log, "ZWIEBEL_DNS_TIMEOUT", 10*time.Minute), "timeout for the DNS cache. DNS entries are cached for this duration")
+	xForwardedFor := flag.Bool("x-forwarded-for", lookupEnvOrBool(log, "ZWIEBEL_X_FORWARDED-FOR", false), "Use X-Forwarded-For Header to get real client ip. Only set it behind a reverse proxy, otherwise the IP Access check can easily be bypassed.")
+	allowedIPs := flag.String("allowed-ips", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_IPS", ""), "if set, only the specified IPs are allowed. Split multiple IPs by comma. If empty, all IPs are allowed.")
+	allowedHosts := flag.String("allowed-hosts", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_HOSTS", ""), "if set, only the specified hosts are allowed. A reverse lookup for the host is done to compare the request ip with the dns value. This way you can allow DynDNS domains for dynamic IPs. Supply multiple values seperated by comma. If empty, all IPs are allowed.")
 	flag.Parse()
 
 	if *debug {
@@ -89,11 +98,15 @@ func main() {
 	}).DialContext
 
 	app := &application{
-		transport: tr,
-		domain:    *domain,
-		timeout:   *timeout,
-		logger:    log,
-		templates: template.Must(template.ParseFS(templateFS, "templates/*.tmpl")),
+		transport:     tr,
+		domain:        *domain,
+		timeout:       *timeout,
+		logger:        log,
+		templates:     template.Must(template.ParseFS(templateFS, "templates/*.tmpl")),
+		dnsClient:     *newDNSClient(*timeout, *dnsCacheTimeout),
+		xForwardedFor: *xForwardedFor,
+		allowedIPs:    DeleteEmptyItems(strings.Split(*allowedIPs, ",")),
+		allowedHosts:  DeleteEmptyItems(strings.Split(*allowedHosts, ",")),
 	}
 
 	srv := &http.Server{
@@ -124,9 +137,12 @@ func (app *application) routes() http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
+	if app.xForwardedFor {
+		r.Use(middleware.RealIP)
+	}
 	r.Use(middleware.Logger)
 	r.Use(app.xHeaderMiddleware)
+	r.Use(app.ipAuthModdleware)
 	r.Use(middleware.Recoverer)
 
 	ph := http.HandlerFunc(app.proxyHandler)
@@ -230,5 +246,53 @@ func (app *application) xHeaderMiddleware(next http.Handler) http.Handler {
 			}
 		}
 		next.ServeHTTP(rw, r)
+	})
+}
+
+func (app *application) ipAuthModdleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		if len(app.allowedHosts) == 0 && len(app.allowedIPs) == 0 {
+			// configured as a public server, no ip checks
+			next.ServeHTTP(rw, r)
+			return
+		}
+
+		remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			remoteIP = r.RemoteAddr
+		}
+		remoteIP = strings.TrimSpace(remoteIP)
+
+		if remoteIP == "" {
+			app.logError(rw, fmt.Errorf("could not determine remote ip"), http.StatusBadRequest)
+			return
+		}
+
+		for _, ip := range app.allowedIPs {
+			if ip == remoteIP {
+				app.logger.Infof("allowing whitelisted ip %s", ip)
+				next.ServeHTTP(rw, r)
+				return
+			}
+		}
+
+		for _, d := range app.allowedHosts {
+			dynamicIP, err := app.dnsClient.ipLookup(r.Context(), d)
+			if err != nil {
+				app.logError(rw, fmt.Errorf("invalid domain %q in config: %w", d, err), http.StatusInternalServerError)
+				return
+			}
+			app.logger.Debugf("resolved %s to %s", d, strings.Join(dynamicIP, ", "))
+			for _, i := range dynamicIP {
+				if i == remoteIP {
+					app.logger.Infof("allowing client %s with hostnames %s", remoteIP, d)
+					next.ServeHTTP(rw, r)
+					return
+				}
+			}
+		}
+
+		app.logError(rw, fmt.Errorf("access denied for %s", remoteIP), http.StatusForbidden)
+		return
 	})
 }

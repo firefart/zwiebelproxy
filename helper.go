@@ -85,3 +85,13 @@ func gzipInput(data []byte) ([]byte, error) {
 
 	return b.Bytes(), nil
 }
+
+func DeleteEmptyItems(s []string) []string {
+	var r []string
+	for _, str := range s {
+		if str != "" {
+			r = append(r, str)
+		}
+	}
+	return r
+}
