@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"net/netip"
 	"net/url"
 	"os"
 	"os/signal"
@@ -25,15 +26,16 @@ import (
 )
 
 type application struct {
-	xForwardedFor bool
-	allowedHosts  []string
-	allowedIPs    []string
-	transport     *http.Transport
-	domain        string
-	timeout       time.Duration
-	logger        Logger
-	templates     *template.Template
-	dnsClient     dnsClient
+	xForwardedFor   bool
+	allowedHosts    []string
+	allowedIPs      []string
+	allowedIPRanges []netip.Prefix
+	transport       *http.Transport
+	domain          string
+	timeout         time.Duration
+	logger          Logger
+	templates       *template.Template
+	dnsClient       dnsClient
 }
 
 var (
@@ -71,6 +73,7 @@ func run(log *logrus.Logger) error {
 	dnsCacheTimeout := flag.Duration("dns-timeout", lookupEnvOrDuration(log, "ZWIEBEL_DNS_TIMEOUT", 10*time.Minute), "timeout for the DNS cache. DNS entries are cached for this duration")
 	xForwardedFor := flag.Bool("x-forwarded-for", lookupEnvOrBool(log, "ZWIEBEL_X_FORWARDED_FOR", false), "Use X-Forwarded-For Header to get real client ip. Only set it behind a reverse proxy, otherwise the IP Access check can easily be bypassed.")
 	allowedIPs := flag.String("allowed-ips", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_IPS", ""), "if set, only the specified IPs are allowed. Split multiple IPs by comma. If empty, all IPs are allowed.")
+	allowedIPRangesRaw := flag.String("allowed-ip-ranges", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_IPRANGES", ""), "if set, only the specified IP ranges are allowed. Split multiple IP ranges by comma. If empty, all IPs are allowed. Please supply in CIDR notation (eg. 10.0.0.0/8)")
 	allowedHosts := flag.String("allowed-hosts", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_HOSTS", ""), "if set, only the specified hosts are allowed. A reverse lookup for the host is done to compare the request ip with the dns value. This way you can allow DynDNS domains for dynamic IPs. Supply multiple values seperated by comma. If empty, all IPs are allowed.")
 	publicKeyFile := flag.String("public-key", lookupEnvOrString(log, "ZWIEBEL_PUBLIC_KEY", ""), "TLS public key to use")
 	privateKeyFile := flag.String("private-key", lookupEnvOrString(log, "ZWIEBEL_PRIVATE_KEY", ""), "TLS private key to use")
@@ -108,16 +111,27 @@ func run(log *logrus.Logger) error {
 		KeepAlive: *timeout,
 	}).DialContext
 
+	var allowedIPRanges []netip.Prefix
+	allowedIPRangesSplit := DeleteEmptyItems(strings.Split(*allowedIPRangesRaw, ","))
+	for _, x := range allowedIPRangesSplit {
+		prefix, err := netip.ParsePrefix(x)
+		if err != nil {
+			return fmt.Errorf("invalid range %s: %w", x, err)
+		}
+		allowedIPRanges = append(allowedIPRanges, prefix)
+	}
+
 	app := &application{
-		transport:     tr,
-		domain:        *domain,
-		timeout:       *timeout,
-		logger:        log,
-		templates:     template.Must(template.ParseFS(templateFS, "templates/*.tmpl")),
-		dnsClient:     *newDNSClient(*timeout, *dnsCacheTimeout),
-		xForwardedFor: *xForwardedFor,
-		allowedIPs:    DeleteEmptyItems(strings.Split(*allowedIPs, ",")),
-		allowedHosts:  DeleteEmptyItems(strings.Split(*allowedHosts, ",")),
+		transport:       tr,
+		domain:          *domain,
+		timeout:         *timeout,
+		logger:          log,
+		templates:       template.Must(template.ParseFS(templateFS, "templates/*.tmpl")),
+		dnsClient:       *newDNSClient(*timeout, *dnsCacheTimeout),
+		xForwardedFor:   *xForwardedFor,
+		allowedIPs:      DeleteEmptyItems(strings.Split(*allowedIPs, ",")),
+		allowedHosts:    DeleteEmptyItems(strings.Split(*allowedHosts, ",")),
+		allowedIPRanges: allowedIPRanges,
 	}
 
 	httpSrv := &http.Server{
@@ -283,7 +297,7 @@ func (app *application) xHeaderMiddleware(next http.Handler) http.Handler {
 
 func (app *application) ipAuthModdleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		if len(app.allowedHosts) == 0 && len(app.allowedIPs) == 0 {
+		if len(app.allowedHosts) == 0 && len(app.allowedIPs) == 0 && len(app.allowedIPRanges) == 0 {
 			// configured as a public server, no ip checks
 			next.ServeHTTP(rw, r)
 			return
@@ -300,9 +314,23 @@ func (app *application) ipAuthModdleware(next http.Handler) http.Handler {
 			return
 		}
 
+		ipParsed, err := netip.ParseAddr(remoteIP)
+		if err != nil {
+			app.logError(rw, fmt.Errorf("could not parse remote ip: %w", err), http.StatusBadRequest)
+			return
+		}
+
 		for _, ip := range app.allowedIPs {
 			if ip == remoteIP {
 				app.logger.Infof("allowing whitelisted ip %s", ip)
+				next.ServeHTTP(rw, r)
+				return
+			}
+		}
+
+		for _, prefix := range app.allowedIPRanges {
+			if prefix.Contains(ipParsed) {
+				app.logger.Infof("allowing whitelisted ip %s because it is in whitelisted prefix %s", remoteIP, prefix.String())
 				next.ServeHTTP(rw, r)
 				return
 			}
