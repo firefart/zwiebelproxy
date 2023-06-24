@@ -339,6 +339,5 @@ func (app *application) ipAuthModdleware(next http.Handler) http.Handler {
 		}
 
 		app.logError(rw, fmt.Errorf("access denied for %s", remoteIP), http.StatusForbidden)
-		return
 	})
 }
