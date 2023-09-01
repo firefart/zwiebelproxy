@@ -139,7 +139,7 @@ func run(log *logrus.Logger) error {
 	}
 
 	for _, word := range strings.Split(*blacklistedWords, ",") {
-		fullRegex := fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta(word))
+		fullRegex := fmt.Sprintf(`(?i)\b%s\b`, regexp.QuoteMeta(word))
 		re, err := regexp.Compile(fullRegex)
 		if err != nil {
 			return err
