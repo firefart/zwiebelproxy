@@ -146,6 +146,12 @@ func (app *application) modifyResponse(resp *http.Response) error {
 	body = bytes.ReplaceAll(body, []byte(`.onion"`), []byte(fmt.Sprintf(`%s"`, domain)))
 	body = bytes.ReplaceAll(body, []byte(".onion<"), []byte(fmt.Sprintf("%s<", domain)))
 
+	for word, re := range app.blacklistedwords {
+		if re.Match(body) {
+			return fmt.Errorf("access to the site is forbidden because it contains the blacklisted word %q", word)
+		}
+	}
+
 	// if we unpacked before, respect the client and repack the modified body (the header is still set)
 	if usedGzip {
 		app.logger.Debugf("%s - re gzipping body", sanitizeString(resp.Request.URL.String()))

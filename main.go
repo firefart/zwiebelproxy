@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"regexp"
 	"strings"
 	"syscall"
 	"text/template"
@@ -26,16 +27,17 @@ import (
 )
 
 type application struct {
-	xForwardedFor   bool
-	allowedHosts    []string
-	allowedIPs      []string
-	allowedIPRanges []netip.Prefix
-	transport       *http.Transport
-	domain          string
-	timeout         time.Duration
-	logger          Logger
-	templates       *template.Template
-	dnsClient       dnsClient
+	xForwardedFor    bool
+	allowedHosts     []string
+	allowedIPs       []string
+	allowedIPRanges  []netip.Prefix
+	blacklistedwords map[string]*regexp.Regexp
+	transport        *http.Transport
+	domain           string
+	timeout          time.Duration
+	logger           Logger
+	templates        *template.Template
+	dnsClient        dnsClient
 }
 
 var (
@@ -77,6 +79,7 @@ func run(log *logrus.Logger) error {
 	allowedHosts := flag.String("allowed-hosts", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_HOSTS", ""), "if set, only the specified hosts are allowed. A reverse lookup for the host is done to compare the request ip with the dns value. This way you can allow DynDNS domains for dynamic IPs. Supply multiple values seperated by comma. If empty, all IPs are allowed.")
 	publicKeyFile := flag.String("public-key", lookupEnvOrString(log, "ZWIEBEL_PUBLIC_KEY", ""), "TLS public key to use")
 	privateKeyFile := flag.String("private-key", lookupEnvOrString(log, "ZWIEBEL_PRIVATE_KEY", ""), "TLS private key to use")
+	blacklistedWords := flag.String("blacklisted-words", lookupEnvOrString(log, "ZWIEBEL_BLACKLISTED_WORDS", ""), "Comma separated list of blacklisted words. This word is matched with a boundary regex (\bword\b) and if it matches the response body the request is aborted")
 	flag.Parse()
 
 	if *debug {
@@ -122,16 +125,26 @@ func run(log *logrus.Logger) error {
 	}
 
 	app := &application{
-		transport:       tr,
-		domain:          *domain,
-		timeout:         *timeout,
-		logger:          log,
-		templates:       template.Must(template.ParseFS(templateFS, "templates/*.tmpl")),
-		dnsClient:       *newDNSClient(*timeout, *dnsCacheTimeout),
-		xForwardedFor:   *xForwardedFor,
-		allowedIPs:      DeleteEmptyItems(strings.Split(*allowedIPs, ",")),
-		allowedHosts:    DeleteEmptyItems(strings.Split(*allowedHosts, ",")),
-		allowedIPRanges: allowedIPRanges,
+		transport:        tr,
+		domain:           *domain,
+		timeout:          *timeout,
+		logger:           log,
+		templates:        template.Must(template.ParseFS(templateFS, "templates/*.tmpl")),
+		dnsClient:        *newDNSClient(*timeout, *dnsCacheTimeout),
+		xForwardedFor:    *xForwardedFor,
+		allowedIPs:       DeleteEmptyItems(strings.Split(*allowedIPs, ",")),
+		allowedHosts:     DeleteEmptyItems(strings.Split(*allowedHosts, ",")),
+		allowedIPRanges:  allowedIPRanges,
+		blacklistedwords: make(map[string]*regexp.Regexp),
+	}
+
+	for _, word := range strings.Split(*blacklistedWords, ",") {
+		fullRegex := fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta(word))
+		re, err := regexp.Compile(fullRegex)
+		if err != nil {
+			return err
+		}
+		app.blacklistedwords[word] = re
 	}
 
 	httpSrv := &http.Server{
