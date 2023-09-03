@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -23,7 +24,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
-	"github.com/sirupsen/logrus"
 )
 
 type application struct {
@@ -35,7 +35,7 @@ type application struct {
 	transport        *http.Transport
 	domain           string
 	timeout          time.Duration
-	logger           Logger
+	logger           *log
 	templates        *template.Template
 	dnsClient        dnsClient
 }
@@ -46,23 +46,20 @@ var (
 )
 
 func main() {
-	log := logrus.New()
-	log.SetOutput(os.Stdout)
-	log.SetLevel(logrus.InfoLevel)
-
+	log := NewLogger(os.Stdout)
 	err := godotenv.Load()
 	if err != nil {
 		log.Warnf("could not load .env file: %v. continuing without", err)
 	}
 
 	if err := run(log); err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 		os.Exit(1)
 	}
 	os.Exit(0)
 }
 
-func run(log *logrus.Logger) error {
+func run(log *log) error {
 	host := flag.String("host", lookupEnvOrString(log, "ZWIEBEL_HOST", ""), "IP to bind to. You can also use the ZWIEBEL_HOST environment variable or an entry in the .env file to set this parameter.")
 	httpPort := flag.String("http-port", lookupEnvOrString(log, "ZWIEBEL_HTTP_PORT", "80"), "HTTP port to use")
 	httpsPort := flag.String("https-port", lookupEnvOrString(log, "ZWIEBEL_HTTPS_PORT", "443"), "HTTPS port to use")
@@ -82,7 +79,7 @@ func run(log *logrus.Logger) error {
 	flag.Parse()
 
 	if *debug {
-		log.SetLevel(logrus.DebugLevel)
+		log.SetLevel(slog.LevelDebug)
 		log.Debug("DEBUG mode enabled")
 	}
 
@@ -220,7 +217,7 @@ func (app *application) logError(w http.ResponseWriter, err error, statusCode in
 		Error: errorText,
 	}
 	if err2 := app.templates.ExecuteTemplate(w, "default.tmpl", data); err2 != nil {
-		app.logger.Error(err2)
+		app.logger.Error(err2.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }

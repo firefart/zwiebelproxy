@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"testing"
 	"time"
@@ -52,12 +53,12 @@ func TestLookupEnvOrString(t *testing.T) {
 
 			envName := randString(10)
 
-			logger := DiscardLogger{}
+			logger := NewLogger(io.Discard)
 			if tt.setEnv {
 				os.Setenv(envName, tt.value)
 				defer os.Unsetenv(envName)
 			}
-			res := lookupEnvOrString(&logger, envName, tt.defaultValue)
+			res := lookupEnvOrString(logger, envName, tt.defaultValue)
 			assert.Equal(t, tt.expected, res)
 		})
 	}
@@ -90,12 +91,12 @@ func TestLookupEnvOrBool(t *testing.T) {
 
 			envName := randString(10)
 
-			logger := DiscardLogger{}
+			logger := NewLogger(io.Discard)
 			if tt.setEnv {
 				os.Setenv(envName, tt.value)
 				defer os.Unsetenv(envName)
 			}
-			res := lookupEnvOrBool(&logger, envName, tt.defaultValue)
+			res := lookupEnvOrBool(logger, envName, tt.defaultValue)
 			assert.Equal(t, tt.expected, res)
 		})
 	}
@@ -121,12 +122,12 @@ func TestLookupEnvOrDuration(t *testing.T) {
 
 			envName := randString(10)
 
-			logger := DiscardLogger{}
+			logger := NewLogger(io.Discard)
 			if tt.setEnv {
 				os.Setenv(envName, tt.value)
 				defer os.Unsetenv(envName)
 			}
-			res := lookupEnvOrDuration(&logger, envName, tt.defaultValue)
+			res := lookupEnvOrDuration(logger, envName, tt.defaultValue)
 			assert.Equal(t, tt.expected, res)
 		})
 	}

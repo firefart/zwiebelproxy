@@ -20,14 +20,14 @@ func randString(n int) string {
 	return string(b)
 }
 
-func lookupEnvOrString(log Logger, key string, defaultVal string) string {
+func lookupEnvOrString(log *log, key string, defaultVal string) string {
 	if val, ok := os.LookupEnv(key); ok {
 		return val
 	}
 	return defaultVal
 }
 
-func lookupEnvOrBool(log Logger, key string, defaultVal bool) bool {
+func lookupEnvOrBool(log *log, key string, defaultVal bool) bool {
 	if val, ok := os.LookupEnv(key); ok {
 		v, err := strconv.ParseBool(val)
 		if err != nil {
@@ -39,7 +39,7 @@ func lookupEnvOrBool(log Logger, key string, defaultVal bool) bool {
 	return defaultVal
 }
 
-func lookupEnvOrDuration(log Logger, key string, defaultVal time.Duration) time.Duration {
+func lookupEnvOrDuration(log *log, key string, defaultVal time.Duration) time.Duration {
 	if val, ok := os.LookupEnv(key); ok {
 		v, err := time.ParseDuration(val)
 		if err != nil {

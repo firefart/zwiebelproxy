@@ -39,7 +39,7 @@ func TestRewrite(t *testing.T) {
 			}
 			app := application{
 				domain: domain,
-				logger: &DiscardLogger{},
+				logger: NewLogger(io.Discard),
 			}
 			pr := &httputil.ProxyRequest{
 				In:  r,
@@ -93,7 +93,7 @@ func TestRewriteWebRequest(t *testing.T) {
 
 			app := application{
 				domain: domain,
-				logger: &DiscardLogger{},
+				logger: NewLogger(io.Discard),
 			}
 			pr := &httputil.ProxyRequest{
 				In:  r,
@@ -150,7 +150,7 @@ func TestModifyResponse(t *testing.T) {
 
 			app := application{
 				domain: domain,
-				logger: &DiscardLogger{},
+				logger: NewLogger(io.Discard),
 			}
 
 			if err := app.modifyResponse(&resp); err != nil {
