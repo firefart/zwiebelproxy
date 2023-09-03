@@ -135,6 +135,9 @@ func run(log *log) error {
 	}
 
 	for _, word := range strings.Split(*blacklistedWords, ",") {
+		if word == "" {
+			continue
+		}
 		fullRegex := fmt.Sprintf(`(?i)\b%s\b`, regexp.QuoteMeta(word))
 		re, err := regexp.Compile(fullRegex)
 		if err != nil {
@@ -197,7 +200,7 @@ func (app *application) routes() http.Handler {
 		r.Use(app.xHeaderMiddleware)
 	}
 	r.Use(middleware.Logger)
-	r.Use(app.ipAuthModdleware)
+	r.Use(app.ipAuthMiddleware)
 	r.Use(middleware.Recoverer)
 
 	ph := http.HandlerFunc(app.proxyHandler)
@@ -304,7 +307,7 @@ func (app *application) xHeaderMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (app *application) ipAuthModdleware(next http.Handler) http.Handler {
+func (app *application) ipAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		if len(app.allowedHosts) == 0 && len(app.allowedIPs) == 0 && len(app.allowedIPRanges) == 0 {
 			// configured as a public server, no ip checks
