@@ -27,7 +27,7 @@ jobs:
 
       - name: Docker zwiebel meta
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: firefart/zwiebelproxy
           tags: |
@@ -39,7 +39,7 @@ jobs:
 
       - name: Docker tor meta
         id: meta_tor
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: firefart/zwiebelproxy
           tags: |
