@@ -27,7 +27,7 @@ import (
 )
 
 type application struct {
-	xForwardedFor    bool
+	ipHeader         bool
 	allowedHosts     []string
 	allowedIPs       []string
 	allowedIPRanges  []netip.Prefix
@@ -71,7 +71,7 @@ func run(log *log) error {
 	wait := flag.Duration("graceful-timeout", lookupEnvOrDuration(log, "ZWIEBEL_GRACEFUL_TIMEOUT", 5*time.Second), "the duration for which the server gracefully wait for existing connections to finish - e.g. 15s or 1m. You can also use the ZWIEBEL_GRACEFUL_TIMEOUT environment variable or an entry in the .env file to set this parameter.")
 	timeout := flag.Duration("timeout", lookupEnvOrDuration(log, "ZWIEBEL_TIMEOUT", 5*time.Minute), "http timeout. You can also use the ZWIEBEL_TIMEOUT environment variable or an entry in the .env file to set this parameter.")
 	dnsCacheTimeout := flag.Duration("dns-timeout", lookupEnvOrDuration(log, "ZWIEBEL_DNS_TIMEOUT", 10*time.Minute), "timeout for the DNS cache. DNS entries are cached for this duration")
-	xForwardedFor := flag.Bool("x-forwarded-for", lookupEnvOrBool(log, "ZWIEBEL_X_FORWARDED_FOR", false), "Use X-Forwarded-For Header to get real client ip. Only set it behind a reverse proxy, otherwise the IP Access check can easily be bypassed.")
+	ipheader := flag.Bool("ip-header", lookupEnvOrBool(log, "ZWIEBEL_IP_HEADER", false), "Use Header like X-Forwarded-For or CF-Connecting-IPto get real client ip. Only set it behind a reverse proxy, otherwise the IP Access check can easily be bypassed.")
 	allowedIPs := flag.String("allowed-ips", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_IPS", ""), "if set, only the specified IPs are allowed. Split multiple IPs by comma. If empty, all IPs are allowed.")
 	allowedIPRangesRaw := flag.String("allowed-ip-ranges", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_IPRANGES", ""), "if set, only the specified IP ranges are allowed. Split multiple IP ranges by comma. If empty, all IPs are allowed. Please supply in CIDR notation (eg. 10.0.0.0/8)")
 	allowedHosts := flag.String("allowed-hosts", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_HOSTS", ""), "if set, only the specified hosts are allowed. A reverse lookup for the host is done to compare the request ip with the dns value. This way you can allow DynDNS domains for dynamic IPs. Supply multiple values seperated by comma. If empty, all IPs are allowed.")
@@ -127,7 +127,7 @@ func run(log *log) error {
 		logger:           log,
 		templates:        template.Must(template.ParseFS(templateFS, "templates/*.tmpl")),
 		dnsClient:        *newDNSClient(*timeout, *dnsCacheTimeout),
-		xForwardedFor:    *xForwardedFor,
+		ipHeader:         *ipheader,
 		allowedIPs:       DeleteEmptyItems(strings.Split(*allowedIPs, ",")),
 		allowedHosts:     DeleteEmptyItems(strings.Split(*allowedHosts, ",")),
 		allowedIPRanges:  allowedIPRanges,
@@ -198,7 +198,7 @@ func (app *application) routes() http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
-	if app.xForwardedFor {
+	if app.ipHeader {
 		r.Use(middleware.RealIP)
 		r.Use(app.xHeaderMiddleware)
 	}
