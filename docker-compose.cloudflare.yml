@@ -38,11 +38,9 @@ services:
   tunnel:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
-    command: tunnel --no-autoupdate
-    environment:
-      - TUNNEL_TOKEN=/run/secrets/zwiebelProxyTunnelToken
-    secrets:
-      - zwiebelProxyTunnelToken
+    command: tunnel --no-autoupdate run
+    env_file:
+      - cloudflare.env
     networks:
       - tor
 
