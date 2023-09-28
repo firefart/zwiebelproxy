@@ -29,16 +29,22 @@ services:
       dockerfile: Dockerfiles/Dockerfile.zwiebelproxy
     restart: unless-stopped
     env_file: .env
-    volumes:
-      - ./certs/:/certs:ro
     command: "--host 0.0.0.0 --tor socks5://tor:9050"
     depends_on:
       - tor
     networks:
       - tor
-    ports:
-      - "80:80"
-      - "443:443"
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate
+    environment:
+      - TUNNEL_TOKEN=/run/secrets/zwiebelProxyTunnelToken
+    secrets:
+      - zwiebelProxyTunnelToken
+    networks:
+      - tor
 
 networks:
   tor: {}

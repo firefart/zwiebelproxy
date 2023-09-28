@@ -33,15 +33,20 @@ func (app *application) rewrite(r *httputil.ProxyRequest) {
 
 	scheme := r.In.URL.Scheme
 	if scheme == "" {
-		switch port {
-		case "":
-			scheme = "http"
-		case "80":
-			scheme = "http"
-		case "443":
-			scheme = "https"
-		default:
-			scheme = "http"
+		h := r.In.Header.Get("X-Forwarded-Proto")
+		if h != "" {
+			scheme = h
+		} else {
+			switch port {
+			case "":
+				scheme = "http"
+			case "80":
+				scheme = "http"
+			case "443":
+				scheme = "https"
+			default:
+				scheme = "http"
+			}
 		}
 	}
 	if r.In.TLS != nil {
