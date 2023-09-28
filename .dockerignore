@@ -9,3 +9,5 @@ Makefile
 *.yaml
 .git
 certs/*.pem
+*.secret
+*.env
