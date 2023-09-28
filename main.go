@@ -166,15 +166,18 @@ func run(log *log) error {
 		}
 	}()
 
-	go func() {
-		if err := httpsSrv.ListenAndServeTLS(*publicKeyFile, *privateKeyFile); err != nil {
-			// not interested in server closed messages
-			if !errors.Is(err, http.ErrServerClosed) {
-				app.logger.Errorf("httpsSrv Error: %v", err)
-				app.logger.Debugf("%#v", err)
+	// only start https server if we provide certificates
+	if *publicKeyFile != "" && *privateKeyFile != "" {
+		go func() {
+			if err := httpsSrv.ListenAndServeTLS(*publicKeyFile, *privateKeyFile); err != nil {
+				// not interested in server closed messages
+				if !errors.Is(err, http.ErrServerClosed) {
+					app.logger.Errorf("httpsSrv Error: %v", err)
+					app.logger.Debugf("%#v", err)
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT)
