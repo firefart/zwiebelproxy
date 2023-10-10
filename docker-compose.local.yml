@@ -1,0 +1,44 @@
+version: "3.9"
+services:
+  tor:
+    build:
+      context: .
+      dockerfile: Dockerfiles/Dockerfile.tor
+    ports:
+      - target: 9050
+        host_ip: 127.0.0.1
+        protocol: tcp
+        mode: host
+    deploy:
+      mode: replicated
+      replicas: ${ZWIEBELPROXY_REPLICAS:-5}
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 80M
+        reservations:
+          cpus: "0.25"
+          memory: 30M
+    restart: unless-stopped
+    networks:
+      - tor
+
+  zwiebelproxy:
+    build:
+      context: .
+      dockerfile: Dockerfiles/Dockerfile.zwiebelproxy
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./certs/:/certs:ro
+    command: "--host 0.0.0.0 --tor socks5://tor:9050"
+    depends_on:
+      - tor
+    networks:
+      - tor
+    ports:
+      - "127.0.0.1:9000:80"
+      - "127.0.0.1:9443:443"
+
+networks:
+  tor: {}
