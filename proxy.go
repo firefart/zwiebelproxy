@@ -85,7 +85,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 	}
 
 	// remove headers like HSTS
-	headersToRemove := []string{"Strict-Transport-Security"}
+	headersToRemove := []string{"Strict-Transport-Security", "Public-Key-Pins", "Public-Key-Pins-Report-Only"}
 	for _, h := range headersToRemove {
 		resp.Header.Del(h)
 	}
