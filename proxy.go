@@ -84,6 +84,12 @@ func (app *application) modifyResponse(resp *http.Response) error {
 		}
 	}
 
+	// remove headers like HSTS
+	headersToRemove := []string{"Strict-Transport-Security"}
+	for _, h := range headersToRemove {
+		resp.Header.Del(h)
+	}
+
 	// no body modification on file downloads
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition
 	contentDisp, ok := resp.Header["Content-Disposition"]
