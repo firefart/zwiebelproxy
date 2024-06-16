@@ -71,14 +71,17 @@ func (app *application) proxyErrorHandler(w http.ResponseWriter, r *http.Request
 
 // modify the response
 func (app *application) modifyResponse(resp *http.Response) error {
-	app.logger.Debug("entered modifyResponse", slog.String("url", sanitizeString(resp.Request.URL.String())), slog.Int("status-code", resp.StatusCode))
+	app.logger.Debug("entered modifyResponse",
+		slog.String("url", sanitizeString(resp.Request.URL.String())),
+		slog.Int("status-code", resp.StatusCode),
+		slog.String("headers", fmt.Sprintf("%#v", resp.Header)),
+	)
 
 	domain := app.domain
 	if !strings.HasPrefix(domain, ".") {
 		domain = fmt.Sprintf(".%s", domain)
 	}
 
-	app.logger.Debug("got headers", slog.String("headers", fmt.Sprintf("%#v", resp.Header)))
 	for k, v := range resp.Header {
 		k = strings.ReplaceAll(k, ".onion", domain)
 		resp.Header[k] = []string{}
@@ -134,8 +137,6 @@ func (app *application) modifyResponse(resp *http.Response) error {
 		}
 	}
 
-	app.logger.Debug("replacing strings", slog.String("url", sanitizeString(resp.Request.URL.String())), slog.String("content-type", contentType[0]))
-
 	var reader io.Reader
 	usedGzip := false
 	usedZlib := false
@@ -173,9 +174,6 @@ func (app *application) modifyResponse(resp *http.Response) error {
 	if err != nil {
 		return fmt.Errorf("error on reading body: %w", err)
 	}
-
-	app.logger.Debug("read body", slog.String("url", sanitizeString(resp.Request.URL.String())), slog.Int("body-len", len(body)))
-	app.logger.Debug("replacing all .onion", slog.String("domain", domain))
 
 	// replace stuff for domain replacement
 	body = bytes.ReplaceAll(body, []byte(".onion/"), []byte(fmt.Sprintf("%s/", domain)))
