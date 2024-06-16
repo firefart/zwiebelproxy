@@ -106,6 +106,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 		"text/css",
 		"text/javascript",
 		"text/xml",
+		"application/x-javascript",
 		"application/javascript",
 		"application/json",
 		"application/ld+json",
