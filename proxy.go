@@ -154,6 +154,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 	}
 
 	app.logger.Debug("read body", slog.String("url", sanitizeString(resp.Request.URL.String())), slog.Int("body-len", len(body)))
+	app.logger.Debug("replacing all .onion", slog.String("domain", domain))
 	// replace stuff for domain replacement
 	body = bytes.ReplaceAll(body, []byte(".onion/"), []byte(fmt.Sprintf("%s/", domain)))
 	body = bytes.ReplaceAll(body, []byte(`.onion"`), []byte(fmt.Sprintf(`%s"`, domain)))
