@@ -20,7 +20,7 @@ To use it with certbot and local certificates, you need to use a deploy hook as 
 
 Example:
 
-```
+```text
 certbot certonly --dns-cloudflare --dns-cloudflare-credentials /root/.secrets/certbot/cloudflare.ini -d 'onion.tld' -d '*.onion.tld' --deploy-hook "cp -L /etc/letsencrypt/live/onion.tld/*.pem /root/zwiebelproxy/certs/; chmod 0644 /root/zwiebelproxy/certs/*.pem"
 ```
 

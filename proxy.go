@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -57,24 +58,24 @@ func (app *application) rewrite(r *httputil.ProxyRequest) {
 	r.Out.URL.Scheme = scheme
 	r.Out.URL.Host = host
 
-	app.logger.Debugf("modified request: %+v", r.Out)
+	app.logger.Debug("modified request", slog.String("request", fmt.Sprintf("%+v", r.Out)))
 }
 
 // modify the response
 func (app *application) proxyErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
-	app.logError(w, err, http.StatusBadGateway)
+	app.logError(r.Context(), w, err, http.StatusBadGateway)
 }
 
 // modify the response
 func (app *application) modifyResponse(resp *http.Response) error {
-	app.logger.Debugf("entered modifyResponse for %s with status %d", sanitizeString(resp.Request.URL.String()), resp.StatusCode)
+	app.logger.Debug("entered modifyResponse", slog.String("url", sanitizeString(resp.Request.URL.String())), slog.Int("status-code", resp.StatusCode))
 
 	domain := app.domain
 	if !strings.HasPrefix(domain, ".") {
 		domain = fmt.Sprintf(".%s", domain)
 	}
 
-	app.logger.Debugf("Header: %#v", resp.Header)
+	app.logger.Debug("got headers", slog.String("headers", fmt.Sprintf("%#v", resp.Header)))
 	for k, v := range resp.Header {
 		k = strings.ReplaceAll(k, ".onion", domain)
 		resp.Header[k] = []string{}
@@ -94,7 +95,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition
 	contentDisp, ok := resp.Header["Content-Disposition"]
 	if ok && len(contentDisp) > 0 && strings.HasPrefix(contentDisp[0], "attachment") {
-		app.logger.Debugf("%s - detected file download, not attempting to modify body", sanitizeString(resp.Request.URL.String()))
+		app.logger.Debug("detected file download, not attempting to modify body", slog.String("url", sanitizeString(resp.Request.URL.String())))
 		return nil
 	}
 
@@ -116,7 +117,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 
 	contentType, ok := resp.Header["Content-Type"]
 	if !ok {
-		app.logger.Debugf("%s - no content type skipping replace", sanitizeString(resp.Request.URL.String()))
+		app.logger.Debug("no content type skipping replace", slog.String("url", sanitizeString(resp.Request.URL.String())))
 		return nil
 	}
 
@@ -124,18 +125,18 @@ func (app *application) modifyResponse(resp *http.Response) error {
 		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
 		cleanedUpContentType := strings.Split(contentType[0], ";")[0]
 		if !sliceContains(contentTypesForReplace, cleanedUpContentType) {
-			app.logger.Debugf("%s - content type is %s, not replacing", sanitizeString(resp.Request.URL.String()), cleanedUpContentType)
+			app.logger.Debug("did not replace because of content type", slog.String("url", sanitizeString(resp.Request.URL.String())), slog.String("content-type", cleanedUpContentType))
 			return nil
 		}
 	}
 
-	app.logger.Debugf("%s - found content type %s, replacing strings", sanitizeString(resp.Request.URL.String()), contentType[0])
+	app.logger.Debug("replacing strings", slog.String("url", sanitizeString(resp.Request.URL.String())), slog.String("content-type", contentType[0]))
 
 	reader := resp.Body
 	usedGzip := false
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
 	if strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
-		app.logger.Debugf("%s - detected gzipped body", sanitizeString(resp.Request.URL.String()))
+		app.logger.Debug("detected gzipped body", slog.String("url", sanitizeString(resp.Request.URL.String())))
 		var err error
 		reader, err = gzip.NewReader(resp.Body)
 		if err != nil {
@@ -151,7 +152,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 		return fmt.Errorf("error on reading body: %w", err)
 	}
 
-	app.logger.Debugf("%s: Got a %d body len", sanitizeString(resp.Request.URL.String()), len(body))
+	app.logger.Debug("read body", slog.String("url", sanitizeString(resp.Request.URL.String())), slog.Int("body-len", len(body)))
 	// replace stuff for domain replacement
 	body = bytes.ReplaceAll(body, []byte(".onion/"), []byte(fmt.Sprintf("%s/", domain)))
 	body = bytes.ReplaceAll(body, []byte(`.onion"`), []byte(fmt.Sprintf(`%s"`, domain)))
@@ -165,7 +166,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 
 	// if we unpacked before, respect the client and repack the modified body (the header is still set)
 	if usedGzip {
-		app.logger.Debugf("%s - re gzipping body", sanitizeString(resp.Request.URL.String()))
+		app.logger.Debug("re gzipping body", slog.String("url", sanitizeString(resp.Request.URL.String())))
 		gzipped, err := gzipInput(body)
 		if err != nil {
 			return fmt.Errorf("could not gzip body: %w", err)

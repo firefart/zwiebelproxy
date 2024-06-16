@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"embed"
 	"errors"
 	"flag"
 	"fmt"
@@ -18,12 +17,14 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
-	"text/template"
 	"time"
 
+	"github.com/firefart/zwiebelproxy/templates"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
+	"github.com/lmittmann/tint"
+	"github.com/mattn/go-isatty"
 
 	_ "go.uber.org/automaxprocs"
 )
@@ -37,83 +38,140 @@ type application struct {
 	transport        *http.Transport
 	domain           string
 	timeout          time.Duration
-	logger           *log
-	templates        *template.Template
+	logger           *slog.Logger
 	dnsClient        dnsClient
 }
 
-var (
-	//go:embed templates
-	templateFS embed.FS
-)
+func newLogger(debugMode, jsonOutput bool) *slog.Logger {
+	w := os.Stdout
+	var level = new(slog.LevelVar)
+	level.Set(slog.LevelInfo)
 
-func main() {
-	log := NewLogger(os.Stdout)
-	err := godotenv.Load()
-	if err != nil {
-		log.Warnf("could not load .env file: %v. continuing without", err)
+	var replaceFunc func(groups []string, a slog.Attr) slog.Attr
+	if debugMode {
+		level.Set(slog.LevelDebug)
+		// add source file information
+		wd, err := os.Getwd()
+		if err != nil {
+			panic("unable to determine working directory")
+		}
+		replaceFunc = func(_ []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.SourceKey {
+				source := a.Value.Any().(*slog.Source)
+				// remove current working directory and only leave the relative path to the program
+				if file, ok := strings.CutPrefix(source.File, wd); ok {
+					source.File = file
+				}
+			}
+			return a
+		}
 	}
 
-	if err := run(log); err != nil {
+	var handler slog.Handler
+	if jsonOutput {
+		handler = slog.NewJSONHandler(w, &slog.HandlerOptions{
+			Level:       level,
+			AddSource:   debugMode,
+			ReplaceAttr: replaceFunc,
+		})
+	} else {
+		textOptions := &tint.Options{
+			Level:       level,
+			NoColor:     !isatty.IsTerminal(w.Fd()),
+			AddSource:   debugMode,
+			ReplaceAttr: replaceFunc,
+		}
+		handler = tint.NewHandler(w, textOptions)
+	}
+	return slog.New(handler)
+}
+
+type cliOptions struct {
+	host               *string
+	httpPort           *string
+	httpsPort          *string
+	publicKeyFile      *string
+	privateKeyFile     *string
+	debug              *bool
+	jsonOutput         *bool
+	domain             *string
+	tor                *string
+	wait               *time.Duration
+	timeout            *time.Duration
+	dnsCacheTimeout    *time.Duration
+	ipheader           *bool
+	allowedIPs         *string
+	allowedIPRangesRaw *string
+	allowedHosts       *string
+	blacklistedWords   *string
+}
+
+func main() {
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Printf("could not load .env file: %v. continuing without\n", err)
+	}
+
+	var opts cliOptions
+
+	opts.host = flag.String("host", lookupEnvOrString("ZWIEBEL_HOST", ""), "IP to bind to. You can also use the ZWIEBEL_HOST environment variable or an entry in the .env file to set this parameter.")
+	opts.httpPort = flag.String("http-port", lookupEnvOrString("ZWIEBEL_HTTP_PORT", "80"), "HTTP port to use")
+	opts.httpsPort = flag.String("https-port", lookupEnvOrString("ZWIEBEL_HTTPS_PORT", "443"), "HTTPS port to use")
+	opts.publicKeyFile = flag.String("public-key", lookupEnvOrString("ZWIEBEL_PUBLIC_KEY", ""), "TLS public key to use")
+	opts.privateKeyFile = flag.String("private-key", lookupEnvOrString("ZWIEBEL_PRIVATE_KEY", ""), "TLS private key to use")
+	opts.debug = flag.Bool("debug", lookupEnvOrBool("ZWIEBEL_DEBUG", false), "Enable DEBUG mode. You can also use the ZWIEBEL_DEBUG environment variable or an entry in the .env file to set this parameter.")
+	opts.jsonOutput = flag.Bool("json-out", lookupEnvOrBool("ZWIEBEL_JSON_OUTPUT", false), "Log as JSON. You can also use the ZWIEBEL_JSON_OUTPUT environment variable or an entry in the .env file to set this parameter.")
+	opts.domain = flag.String("domain", lookupEnvOrString("ZWIEBEL_DOMAIN", ""), "domain to use. You can also use the ZWIEBEL_DOMAIN environment variable or an entry in the .env file to set this parameter.")
+	opts.tor = flag.String("tor", lookupEnvOrString("ZWIEBEL_TOR", "socks5://127.0.0.1:9050"), "TOR Proxy server. You can also use the ZWIEBEL_TOR environment variable or an entry in the .env file to set this parameter.")
+	opts.wait = flag.Duration("graceful-timeout", lookupEnvOrDuration("ZWIEBEL_GRACEFUL_TIMEOUT", 5*time.Second), "the duration for which the server gracefully wait for existing connections to finish - e.g. 15s or 1m. You can also use the ZWIEBEL_GRACEFUL_TIMEOUT environment variable or an entry in the .env file to set this parameter.")
+	opts.timeout = flag.Duration("timeout", lookupEnvOrDuration("ZWIEBEL_TIMEOUT", 5*time.Minute), "http timeout. You can also use the ZWIEBEL_TIMEOUT environment variable or an entry in the .env file to set this parameter.")
+	opts.dnsCacheTimeout = flag.Duration("dns-timeout", lookupEnvOrDuration("ZWIEBEL_DNS_TIMEOUT", 10*time.Minute), "timeout for the DNS cache. DNS entries are cached for this duration")
+	opts.ipheader = flag.Bool("ip-header", lookupEnvOrBool("ZWIEBEL_IP_HEADER", false), "Use Header like X-Forwarded-For or CF-Connecting-IPto get real client ip. Only set it behind a reverse proxy, otherwise the IP Access check can easily be bypassed.")
+	opts.allowedIPs = flag.String("allowed-ips", lookupEnvOrString("ZWIEBEL_ALLOWED_IPS", ""), "if set, only the specified IPs are allowed. Split multiple IPs by comma. If empty, all IPs are allowed.")
+	opts.allowedIPRangesRaw = flag.String("allowed-ip-ranges", lookupEnvOrString("ZWIEBEL_ALLOWED_IPRANGES", ""), "if set, only the specified IP ranges are allowed. Split multiple IP ranges by comma. If empty, all IPs are allowed. Please supply in CIDR notation (eg. 10.0.0.0/8)")
+	opts.allowedHosts = flag.String("allowed-hosts", lookupEnvOrString("ZWIEBEL_ALLOWED_HOSTS", ""), "if set, only the specified hosts are allowed. A reverse lookup for the host is done to compare the request ip with the dns value. This way you can allow DynDNS domains for dynamic IPs. Supply multiple values seperated by comma. If empty, all IPs are allowed.")
+	opts.blacklistedWords = flag.String("blacklisted-words", lookupEnvOrString("ZWIEBEL_BLACKLISTED_WORDS", ""), "Comma separated list of blacklisted words. This word is matched with a boundary regex (\bword\b) and if it matches the response body the request is aborted")
+	flag.Parse()
+
+	log := newLogger(*opts.debug, *opts.jsonOutput)
+
+	if err := run(log, opts); err != nil {
 		log.Error(err.Error())
 		os.Exit(1)
 	}
 	os.Exit(0)
 }
 
-func run(log *log) error {
-	host := flag.String("host", lookupEnvOrString(log, "ZWIEBEL_HOST", ""), "IP to bind to. You can also use the ZWIEBEL_HOST environment variable or an entry in the .env file to set this parameter.")
-	httpPort := flag.String("http-port", lookupEnvOrString(log, "ZWIEBEL_HTTP_PORT", "80"), "HTTP port to use")
-	httpsPort := flag.String("https-port", lookupEnvOrString(log, "ZWIEBEL_HTTPS_PORT", "443"), "HTTPS port to use")
-	publicKeyFile := flag.String("public-key", lookupEnvOrString(log, "ZWIEBEL_PUBLIC_KEY", ""), "TLS public key to use")
-	privateKeyFile := flag.String("private-key", lookupEnvOrString(log, "ZWIEBEL_PRIVATE_KEY", ""), "TLS private key to use")
-	debug := flag.Bool("debug", lookupEnvOrBool(log, "ZWIEBEL_DEBUG", false), "Enable DEBUG mode. You can also use the ZWIEBEL_DEBUG environment variable or an entry in the .env file to set this parameter.")
-	domain := flag.String("domain", lookupEnvOrString(log, "ZWIEBEL_DOMAIN", ""), "domain to use. You can also use the ZWIEBEL_DOMAIN environment variable or an entry in the .env file to set this parameter.")
-	tor := flag.String("tor", lookupEnvOrString(log, "ZWIEBEL_TOR", "socks5://127.0.0.1:9050"), "TOR Proxy server. You can also use the ZWIEBEL_TOR environment variable or an entry in the .env file to set this parameter.")
-	wait := flag.Duration("graceful-timeout", lookupEnvOrDuration(log, "ZWIEBEL_GRACEFUL_TIMEOUT", 5*time.Second), "the duration for which the server gracefully wait for existing connections to finish - e.g. 15s or 1m. You can also use the ZWIEBEL_GRACEFUL_TIMEOUT environment variable or an entry in the .env file to set this parameter.")
-	timeout := flag.Duration("timeout", lookupEnvOrDuration(log, "ZWIEBEL_TIMEOUT", 5*time.Minute), "http timeout. You can also use the ZWIEBEL_TIMEOUT environment variable or an entry in the .env file to set this parameter.")
-	dnsCacheTimeout := flag.Duration("dns-timeout", lookupEnvOrDuration(log, "ZWIEBEL_DNS_TIMEOUT", 10*time.Minute), "timeout for the DNS cache. DNS entries are cached for this duration")
-	ipheader := flag.Bool("ip-header", lookupEnvOrBool(log, "ZWIEBEL_IP_HEADER", false), "Use Header like X-Forwarded-For or CF-Connecting-IPto get real client ip. Only set it behind a reverse proxy, otherwise the IP Access check can easily be bypassed.")
-	allowedIPs := flag.String("allowed-ips", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_IPS", ""), "if set, only the specified IPs are allowed. Split multiple IPs by comma. If empty, all IPs are allowed.")
-	allowedIPRangesRaw := flag.String("allowed-ip-ranges", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_IPRANGES", ""), "if set, only the specified IP ranges are allowed. Split multiple IP ranges by comma. If empty, all IPs are allowed. Please supply in CIDR notation (eg. 10.0.0.0/8)")
-	allowedHosts := flag.String("allowed-hosts", lookupEnvOrString(log, "ZWIEBEL_ALLOWED_HOSTS", ""), "if set, only the specified hosts are allowed. A reverse lookup for the host is done to compare the request ip with the dns value. This way you can allow DynDNS domains for dynamic IPs. Supply multiple values seperated by comma. If empty, all IPs are allowed.")
-	blacklistedWords := flag.String("blacklisted-words", lookupEnvOrString(log, "ZWIEBEL_BLACKLISTED_WORDS", ""), "Comma separated list of blacklisted words. This word is matched with a boundary regex (\bword\b) and if it matches the response body the request is aborted")
-	flag.Parse()
-
-	if *debug {
-		log.SetLevel(slog.LevelDebug)
-		log.Debug("DEBUG mode enabled")
-	}
-
-	if len(*domain) == 0 {
+func run(log *slog.Logger, opts cliOptions) error {
+	if len(*opts.domain) == 0 {
 		return fmt.Errorf("please provide a domain")
 	}
 
-	if !strings.HasPrefix(*domain, ".") {
-		var a = fmt.Sprintf(".%s", *domain)
-		domain = &a
+	if !strings.HasPrefix(*opts.domain, ".") {
+		var a = fmt.Sprintf(".%s", *opts.domain)
+		opts.domain = &a
 	}
 
-	torProxyURL, err := url.Parse(*tor)
+	torProxyURL, err := url.Parse(*opts.tor)
 	if err != nil {
-		return fmt.Errorf("invalid proxy url %s: %v", *tor, err)
+		return fmt.Errorf("invalid proxy url %s: %v", *opts.tor, err)
 	}
 
 	// used to clone the default transport
 	tr := http.DefaultTransport.(*http.Transport)
 	tr.Proxy = http.ProxyURL(torProxyURL)
 	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	tr.TLSHandshakeTimeout = *timeout
-	tr.ExpectContinueTimeout = *timeout
-	tr.ResponseHeaderTimeout = *timeout
+	tr.TLSHandshakeTimeout = *opts.timeout
+	tr.ExpectContinueTimeout = *opts.timeout
+	tr.ResponseHeaderTimeout = *opts.timeout
 
 	tr.DialContext = (&net.Dialer{
-		Timeout:   *timeout,
-		KeepAlive: *timeout,
+		Timeout:   *opts.timeout,
+		KeepAlive: *opts.timeout,
 	}).DialContext
 
 	var allowedIPRanges []netip.Prefix
-	allowedIPRangesSplit := DeleteEmptyItems(strings.Split(*allowedIPRangesRaw, ","))
+	allowedIPRangesSplit := DeleteEmptyItems(strings.Split(*opts.allowedIPRangesRaw, ","))
 	for _, x := range allowedIPRangesSplit {
 		prefix, err := netip.ParsePrefix(x)
 		if err != nil {
@@ -124,19 +182,18 @@ func run(log *log) error {
 
 	app := &application{
 		transport:        tr,
-		domain:           *domain,
-		timeout:          *timeout,
+		domain:           *opts.domain,
+		timeout:          *opts.timeout,
 		logger:           log,
-		templates:        template.Must(template.ParseFS(templateFS, "templates/*.tmpl")),
-		dnsClient:        *newDNSClient(*timeout, *dnsCacheTimeout),
-		ipHeader:         *ipheader,
-		allowedIPs:       DeleteEmptyItems(strings.Split(*allowedIPs, ",")),
-		allowedHosts:     DeleteEmptyItems(strings.Split(*allowedHosts, ",")),
+		dnsClient:        *newDNSClient(*opts.timeout, *opts.dnsCacheTimeout),
+		ipHeader:         *opts.ipheader,
+		allowedIPs:       DeleteEmptyItems(strings.Split(*opts.allowedIPs, ",")),
+		allowedHosts:     DeleteEmptyItems(strings.Split(*opts.allowedHosts, ",")),
 		allowedIPRanges:  allowedIPRanges,
 		blacklistedwords: make(map[string]*regexp.Regexp),
 	}
 
-	for _, word := range strings.Split(*blacklistedWords, ",") {
+	for _, word := range strings.Split(*opts.blacklistedWords, ",") {
 		if word == "" {
 			continue
 		}
@@ -149,33 +206,31 @@ func run(log *log) error {
 	}
 
 	httpSrv := &http.Server{
-		Addr:    net.JoinHostPort(*host, *httpPort),
+		Addr:    net.JoinHostPort(*opts.host, *opts.httpPort),
 		Handler: app.routes(),
 	}
 	httpsSrv := &http.Server{
-		Addr:    net.JoinHostPort(*host, *httpsPort),
+		Addr:    net.JoinHostPort(*opts.host, *opts.httpsPort),
 		Handler: app.routes(),
 	}
-	log.Infof("Starting server on %s and %s", httpSrv.Addr, httpsSrv.Addr)
+	log.Info("starting server", slog.String("http", httpSrv.Addr), slog.String("https", httpsSrv.Addr))
 
 	go func() {
 		if err := httpSrv.ListenAndServe(); err != nil {
 			// not interested in server closed messages
 			if !errors.Is(err, http.ErrServerClosed) {
-				app.logger.Errorf("httpSrv Error: %v", err)
-				app.logger.Debugf("%#v", err)
+				app.logger.Error("httpSrv Error", slog.String("error", err.Error()))
 			}
 		}
 	}()
 
 	// only start https server if we provide certificates
-	if *publicKeyFile != "" && *privateKeyFile != "" {
+	if *opts.publicKeyFile != "" && *opts.privateKeyFile != "" {
 		go func() {
-			if err := httpsSrv.ListenAndServeTLS(*publicKeyFile, *privateKeyFile); err != nil {
+			if err := httpsSrv.ListenAndServeTLS(*opts.publicKeyFile, *opts.privateKeyFile); err != nil {
 				// not interested in server closed messages
 				if !errors.Is(err, http.ErrServerClosed) {
-					app.logger.Errorf("httpsSrv Error: %v", err)
-					app.logger.Debugf("%#v", err)
+					app.logger.Error("httpsSrv Error", slog.String("error", err.Error()))
 				}
 			}
 		}()
@@ -184,7 +239,7 @@ func run(log *log) error {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT)
 	<-c
-	ctx, cancel := context.WithTimeout(context.Background(), *wait)
+	ctx, cancel := context.WithTimeout(context.Background(), *opts.wait)
 	defer cancel()
 	if err := httpSrv.Shutdown(ctx); err != nil {
 		return err
@@ -213,18 +268,13 @@ func (app *application) routes() http.Handler {
 	return r
 }
 
-func (app *application) logError(w http.ResponseWriter, err error, statusCode int) {
+func (app *application) logError(ctx context.Context, w http.ResponseWriter, err error, statusCode int) {
 	w.WriteHeader(statusCode)
 	w.Header().Set("Connection", "close")
 	errorText := fmt.Sprintf("%v", err)
 	app.logger.Error(errorText)
 
-	data := struct {
-		Error string
-	}{
-		Error: errorText,
-	}
-	if err2 := app.templates.ExecuteTemplate(w, "default.tmpl", data); err2 != nil {
+	if err2 := templates.Index(errorText).Render(ctx, w); err2 != nil {
 		app.logger.Error(err2.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
@@ -239,14 +289,14 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 
 	// show info page when top domain is called
 	if host == strings.TrimLeft(app.domain, ".") {
-		if err := app.templates.ExecuteTemplate(w, "default.tmpl", nil); err != nil {
+		if err := templates.Index("").Render(r.Context(), w); err != nil {
 			panic(fmt.Sprintf("error on executing template: %v", err))
 		}
 		return
 	}
 
 	if !strings.HasSuffix(host, app.domain) {
-		app.logError(w, fmt.Errorf("invalid domain %s called. The domain needs to end in %s", host, app.domain), http.StatusBadRequest)
+		app.logError(r.Context(), w, fmt.Errorf("invalid domain %s called. The domain needs to end in %s", host, app.domain), http.StatusBadRequest)
 		return
 	}
 
@@ -258,7 +308,7 @@ func (app *application) proxyHandler(w http.ResponseWriter, r *http.Request) {
 		ErrorHandler:   app.proxyErrorHandler,
 	}
 
-	app.logger.Debugf("original request: %+v", r)
+	app.logger.Debug("original request", slog.String("request", fmt.Sprintf("%+v", r)))
 
 	// set a custom timeout
 	ctx, cancel := context.WithTimeout(r.Context(), app.timeout)
@@ -327,19 +377,19 @@ func (app *application) ipAuthMiddleware(next http.Handler) http.Handler {
 		remoteIP = strings.TrimSpace(remoteIP)
 
 		if remoteIP == "" {
-			app.logError(rw, fmt.Errorf("could not determine remote ip"), http.StatusBadRequest)
+			app.logError(r.Context(), rw, fmt.Errorf("could not determine remote ip"), http.StatusBadRequest)
 			return
 		}
 
 		ipParsed, err := netip.ParseAddr(remoteIP)
 		if err != nil {
-			app.logError(rw, fmt.Errorf("could not parse remote ip: %w", err), http.StatusBadRequest)
+			app.logError(r.Context(), rw, fmt.Errorf("could not parse remote ip: %w", err), http.StatusBadRequest)
 			return
 		}
 
 		for _, ip := range app.allowedIPs {
 			if ip == remoteIP {
-				app.logger.Infof("allowing whitelisted ip %s", ip)
+				app.logger.Info("allowing whitelisted ip", slog.String("ip", ip))
 				next.ServeHTTP(rw, r)
 				return
 			}
@@ -347,7 +397,7 @@ func (app *application) ipAuthMiddleware(next http.Handler) http.Handler {
 
 		for _, prefix := range app.allowedIPRanges {
 			if prefix.Contains(ipParsed) {
-				app.logger.Infof("allowing whitelisted ip %s because it is in whitelisted prefix %s", remoteIP, prefix.String())
+				app.logger.Info("allowing whitelisted ip range", slog.String("ip", remoteIP), slog.String("matched-prefix", prefix.String()))
 				next.ServeHTTP(rw, r)
 				return
 			}
@@ -356,19 +406,20 @@ func (app *application) ipAuthMiddleware(next http.Handler) http.Handler {
 		for _, d := range app.allowedHosts {
 			dynamicIP, err := app.dnsClient.ipLookup(r.Context(), d)
 			if err != nil {
-				app.logError(rw, fmt.Errorf("invalid domain %q in config: %w", d, err), http.StatusInternalServerError)
+				app.logError(r.Context(), rw, fmt.Errorf("invalid domain %q in config: %w", d, err), http.StatusInternalServerError)
 				return
 			}
-			app.logger.Debugf("resolved %s to %s", d, strings.Join(dynamicIP, ", "))
+
+			app.logger.Debug("dns resolved", slog.String("host", d), slog.String("ips", strings.Join(dynamicIP, ", ")))
 			for _, i := range dynamicIP {
 				if i == remoteIP {
-					app.logger.Infof("allowing client %s with hostnames %s", remoteIP, d)
+					app.logger.Info("allowing client", slog.String("ip", remoteIP), slog.String("hostname", d))
 					next.ServeHTTP(rw, r)
 					return
 				}
 			}
 		}
 
-		app.logError(rw, fmt.Errorf("access denied for %s", remoteIP), http.StatusForbidden)
+		app.logError(r.Context(), rw, fmt.Errorf("access denied for %s", remoteIP), http.StatusForbidden)
 	})
 }

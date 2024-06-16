@@ -11,3 +11,4 @@ Makefile
 certs/*.pem
 *.secret
 *.env
+tmp/

@@ -1,11 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zwiebelproxy</title>
-  <style>
+package templates
+
+templ Index(err string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>Zwiebelproxy</title>
+			<style>
     *, *::before, *::after {
       box-sizing: border-box;
       font-family: Gotham Rounded, sans-serif;
@@ -50,17 +53,18 @@
       font-size: 2em;
     }
   </style>
-</head>
-<body>
-  <div class="container">
-    <h1>ZWIEBELPROXY</h1>
-    {{ if .Error }}
-    <div class="error">
-      {{ .Error }}
-    </div>
-    {{ end }}
-    <h5>&copy; by <a href="https://firefart.at" target="_blank">firefart</a></h5>
-    <h5>Source code available under <a href="https://github.com/firefart/zwiebelproxy" target="_blank">https://github.com/firefart/zwiebelproxy</a></h5>
-  </div>
-</body>
-</html>
+		</head>
+		<body>
+			<div class="container">
+				<h1>ZWIEBELPROXY</h1>
+				if err != "" {
+					<div class="error">
+						{ err }
+					</div>
+				}
+				<h5>&copy; by <a href="https://firefart.at" target="_blank">firefart</a></h5>
+				<h5>Source code available under <a href="https://github.com/firefart/zwiebelproxy" target="_blank">https://github.com/firefart/zwiebelproxy</a></h5>
+			</div>
+		</body>
+	</html>
+}

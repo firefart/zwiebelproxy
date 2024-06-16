@@ -4,3 +4,4 @@ zwiebelproxy
 certs/*.pem
 *.secret
 *.env
+tmp/

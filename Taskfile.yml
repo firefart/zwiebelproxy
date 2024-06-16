@@ -1,0 +1,59 @@
+version: "3"
+
+vars:
+  PROGRAM: zwiebelproxy
+
+tasks:
+  deps:
+    cmds:
+      - go mod tidy -v
+
+  update:
+    cmds:
+      - go get -u
+      - go mod tidy -v
+
+  templ:
+    cmds:
+      - templ generate
+
+  setup:
+    cmds:
+      - go install github.com/a-h/templ/cmd/templ@latest
+      - go install github.com/air-verse/air@latest
+
+  build:
+    aliases: [default]
+    deps: [deps, templ]
+    env:
+      CGO_ENABLED: 0
+    cmds:
+      - go fmt ./...
+      - templ fmt .
+      - go vet ./...
+      - go build -o {{.PROGRAM}}
+
+  test:
+    deps: [deps, templ]
+    env:
+      CGO_ENABLED: 1 # required by -race
+    cmds:
+      - go test -race -cover ./...
+
+  run:
+    deps: [build]
+    cmds:
+      - ./{{.PROGRAM}} --host 127.0.0.1 --http-port 8080 --https-port 8443 -debug
+
+  lint:
+    cmds:
+      - golangci-lint run ./... --timeout=30m
+      - go mod tidy
+
+  lint-update:
+    cmds:
+      - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b {{ .GOPATH }}/bin
+      - golangci-lint --version
+    vars:
+      GOPATH:
+        sh: go env GOPATH

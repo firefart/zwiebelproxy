@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -39,7 +40,7 @@ func TestRewrite(t *testing.T) {
 			}
 			app := application{
 				domain: domain,
-				logger: NewLogger(io.Discard),
+				logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 			}
 			pr := &httputil.ProxyRequest{
 				In:  r,
@@ -93,7 +94,7 @@ func TestRewriteWebRequest(t *testing.T) {
 
 			app := application{
 				domain: domain,
-				logger: NewLogger(io.Discard),
+				logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 			}
 			pr := &httputil.ProxyRequest{
 				In:  r,
@@ -150,7 +151,7 @@ func TestModifyResponse(t *testing.T) {
 
 			app := application{
 				domain: domain,
-				logger: NewLogger(io.Discard),
+				logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 			}
 
 			if err := app.modifyResponse(&resp); err != nil {
