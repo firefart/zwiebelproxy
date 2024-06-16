@@ -155,10 +155,13 @@ func (app *application) modifyResponse(resp *http.Response) error {
 
 	app.logger.Debug("read body", slog.String("url", sanitizeString(resp.Request.URL.String())), slog.Int("body-len", len(body)))
 	app.logger.Debug("replacing all .onion", slog.String("domain", domain))
+
 	// replace stuff for domain replacement
+	app.logger.Debug("body before", slog.String("body", string(body)))
 	body = bytes.ReplaceAll(body, []byte(".onion/"), []byte(fmt.Sprintf("%s/", domain)))
 	body = bytes.ReplaceAll(body, []byte(`.onion"`), []byte(fmt.Sprintf(`%s"`, domain)))
 	body = bytes.ReplaceAll(body, []byte(".onion<"), []byte(fmt.Sprintf("%s<", domain)))
+	app.logger.Debug("body after", slog.String("body", string(body)))
 
 	for word, re := range app.blacklistedwords {
 		if re.Match(body) {
