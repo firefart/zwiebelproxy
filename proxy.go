@@ -153,6 +153,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 		// resp.Header.Del("Content-Encoding")
 		usedGzip = true
 	case strings.EqualFold(contentEncoding, "deflate"):
+		app.logger.Debug("detected zlib body", slog.String("url", sanitizeString(resp.Request.URL.String())))
 		var err error
 		reader, err = zlib.NewReader(resp.Body)
 		if err != nil {
@@ -160,6 +161,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 		}
 		usedZlib = true
 	case strings.EqualFold(contentEncoding, "br"):
+		app.logger.Debug("detected brotli body", slog.String("url", sanitizeString(resp.Request.URL.String())))
 		reader = brotli.NewReader(resp.Body)
 		usedBrotli = true
 	default:
