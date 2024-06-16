@@ -3,11 +3,14 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"compress/zlib"
 	"math/rand"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/andybalholm/brotli"
 )
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -78,6 +81,46 @@ func gzipInput(data []byte) ([]byte, error) {
 	}
 
 	if err = gz.Close(); err != nil {
+		return nil, err
+	}
+
+	return b.Bytes(), nil
+}
+
+func zlibInput(data []byte) ([]byte, error) {
+	var b bytes.Buffer
+	z := zlib.NewWriter(&b)
+
+	_, err := z.Write(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = z.Flush(); err != nil {
+		return nil, err
+	}
+
+	if err = z.Close(); err != nil {
+		return nil, err
+	}
+
+	return b.Bytes(), nil
+}
+
+func brotliInput(data []byte) ([]byte, error) {
+	var b bytes.Buffer
+	z := brotli.NewWriter(&b)
+
+	_, err := z.Write(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = z.Flush(); err != nil {
+		return nil, err
+	}
+
+	if err = z.Close(); err != nil {
 		return nil, err
 	}
 

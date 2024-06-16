@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"compress/zlib"
 	"fmt"
 	"io"
 	"log/slog"
@@ -10,6 +11,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"strings"
+
+	"github.com/andybalholm/brotli"
 )
 
 func (app *application) rewrite(r *httputil.ProxyRequest) {
@@ -133,10 +136,14 @@ func (app *application) modifyResponse(resp *http.Response) error {
 
 	app.logger.Debug("replacing strings", slog.String("url", sanitizeString(resp.Request.URL.String())), slog.String("content-type", contentType[0]))
 
-	reader := resp.Body
+	var reader io.Reader
 	usedGzip := false
+	usedZlib := false
+	usedBrotli := false
+	contentEncoding := resp.Header.Get("Content-Encoding")
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
-	if strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
+	switch {
+	case strings.EqualFold(contentEncoding, "gzip"):
 		app.logger.Debug("detected gzipped body", slog.String("url", sanitizeString(resp.Request.URL.String())))
 		var err error
 		reader, err = gzip.NewReader(resp.Body)
@@ -145,6 +152,18 @@ func (app *application) modifyResponse(resp *http.Response) error {
 		}
 		// resp.Header.Del("Content-Encoding")
 		usedGzip = true
+	case strings.EqualFold(contentEncoding, "deflate"):
+		var err error
+		reader, err = zlib.NewReader(resp.Body)
+		if err != nil {
+			return fmt.Errorf("could not create zlib reader: %w", err)
+		}
+		usedZlib = true
+	case strings.EqualFold(contentEncoding, "br"):
+		reader = brotli.NewReader(resp.Body)
+		usedBrotli = true
+	default:
+		reader = resp.Body
 	}
 
 	// for all other content replace .onion urls with our custom domain
@@ -157,11 +176,9 @@ func (app *application) modifyResponse(resp *http.Response) error {
 	app.logger.Debug("replacing all .onion", slog.String("domain", domain))
 
 	// replace stuff for domain replacement
-	app.logger.Debug("body before", slog.String("body", string(body)))
 	body = bytes.ReplaceAll(body, []byte(".onion/"), []byte(fmt.Sprintf("%s/", domain)))
 	body = bytes.ReplaceAll(body, []byte(`.onion"`), []byte(fmt.Sprintf(`%s"`, domain)))
 	body = bytes.ReplaceAll(body, []byte(".onion<"), []byte(fmt.Sprintf("%s<", domain)))
-	app.logger.Debug("body after", slog.String("body", string(body)))
 
 	for word, re := range app.blacklistedwords {
 		if re.Match(body) {
@@ -177,6 +194,20 @@ func (app *application) modifyResponse(resp *http.Response) error {
 			return fmt.Errorf("could not gzip body: %w", err)
 		}
 		body = gzipped
+	} else if usedZlib {
+		app.logger.Debug("re zlibbing body", slog.String("url", sanitizeString(resp.Request.URL.String())))
+		zlibed, err := zlibInput(body)
+		if err != nil {
+			return fmt.Errorf("could not zlib body: %w", err)
+		}
+		body = zlibed
+	} else if usedBrotli {
+		app.logger.Debug("re brotliing body", slog.String("url", sanitizeString(resp.Request.URL.String())))
+		b, err := brotliInput(body)
+		if err != nil {
+			return fmt.Errorf("could not brotli body: %w", err)
+		}
+		body = b
 	}
 
 	// body can be read only once so recreate a new reader
