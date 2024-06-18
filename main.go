@@ -19,11 +19,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/firefart/zwiebelproxy/templates"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
-	"github.com/lmittmann/tint"
 	"github.com/mattn/go-isatty"
 
 	_ "go.uber.org/automaxprocs"
@@ -74,14 +74,23 @@ func newLogger(debugMode, jsonOutput bool) *slog.Logger {
 			AddSource:   debugMode,
 			ReplaceAttr: replaceFunc,
 		})
-	} else {
-		textOptions := &tint.Options{
+	} else if !isatty.IsTerminal(w.Fd()) {
+		// running as a service
+		handler = slog.NewTextHandler(w, &slog.HandlerOptions{
 			Level:       level,
-			NoColor:     !isatty.IsTerminal(w.Fd()),
 			AddSource:   debugMode,
 			ReplaceAttr: replaceFunc,
+		})
+	} else {
+		// pretty output
+		l := log.InfoLevel
+		if debugMode {
+			l = log.DebugLevel
 		}
-		handler = tint.NewHandler(w, textOptions)
+		handler = log.NewWithOptions(w, log.Options{
+			ReportCaller: true,
+			Level:        l,
+		})
 	}
 	return slog.New(handler)
 }
