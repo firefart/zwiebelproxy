@@ -113,7 +113,7 @@ func (s *server) ipAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		ip := c.RealIP()
 		remoteIP, _, err := net.SplitHostPort(ip)
 		if err != nil {
-			remoteIP = r.RemoteAddr
+			remoteIP = ip
 		}
 		remoteIP = strings.TrimSpace(remoteIP)
 
@@ -124,7 +124,7 @@ func (s *server) ipAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		ipParsed, err := netip.ParseAddr(remoteIP)
 		if err != nil {
 			s.logger.Error("could not parse remote ip", slog.String("err", err.Error()))
-			return echo.NewHTTPError(http.StatusBadGateway, "could not parse remote ip")
+			return echo.NewHTTPError(http.StatusInternalServerError, "could not parse remote ip")
 		}
 
 		for _, ip := range s.allowedIPs {
