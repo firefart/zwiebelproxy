@@ -60,11 +60,10 @@ func NewServer(ctx context.Context,
 
 	e.Use(s.middlewareRequestLogger(ctx))
 	e.Use(middleware.Secure())
-	e.Use(s.middlewareRecover())
-
 	// use forwarding proxy port and schema information
 	e.Use(s.xHeaderMiddleware)
 	e.Use(s.ipAuthMiddleware)
+	e.Use(s.middlewareRecover())
 
 	secretKeyHeaderName = http.CanonicalHeaderKey(secretKeyHeaderName)
 	e.GET("/test/panic", handlers.NewPanicHandler(s.logger, debug, secretKeyHeaderName, secretKeyHeaderValue).Handler)

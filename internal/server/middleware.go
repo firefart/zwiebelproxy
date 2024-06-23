@@ -110,7 +110,8 @@ func (s *server) ipAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 		r := c.Request()
 
-		remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
+		ip := c.RealIP()
+		remoteIP, _, err := net.SplitHostPort(ip)
 		if err != nil {
 			remoteIP = r.RemoteAddr
 		}
