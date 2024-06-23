@@ -1,4 +1,4 @@
-package main
+package helper
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ import (
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-func randString(n int) string {
+func RandString(n int) string {
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
@@ -23,14 +23,14 @@ func randString(n int) string {
 	return string(b)
 }
 
-func lookupEnvOrString(key string, defaultVal string) string {
+func LookupEnvOrString(key string, defaultVal string) string {
 	if val, ok := os.LookupEnv(key); ok {
 		return val
 	}
 	return defaultVal
 }
 
-func lookupEnvOrBool(key string, defaultVal bool) bool {
+func LookupEnvOrBool(key string, defaultVal bool) bool {
 	if val, ok := os.LookupEnv(key); ok {
 		v, err := strconv.ParseBool(val)
 		if err != nil {
@@ -41,7 +41,7 @@ func lookupEnvOrBool(key string, defaultVal bool) bool {
 	return defaultVal
 }
 
-func lookupEnvOrDuration(key string, defaultVal time.Duration) time.Duration {
+func LookupEnvOrDuration(key string, defaultVal time.Duration) time.Duration {
 	if val, ok := os.LookupEnv(key); ok {
 		v, err := time.ParseDuration(val)
 		if err != nil {
@@ -52,7 +52,7 @@ func lookupEnvOrDuration(key string, defaultVal time.Duration) time.Duration {
 	return defaultVal
 }
 
-func sliceContains(slice []string, value string) bool {
+func SliceContains(slice []string, value string) bool {
 	for _, item := range slice {
 		if strings.EqualFold(item, value) {
 			return true
@@ -61,13 +61,13 @@ func sliceContains(slice []string, value string) bool {
 	return false
 }
 
-func sanitizeString(in string) string {
+func SanitizeString(in string) string {
 	escaped := strings.Replace(in, "\n", "", -1)
 	escaped = strings.Replace(escaped, "\r", "", -1)
 	return escaped
 }
 
-func gzipInput(data []byte) ([]byte, error) {
+func GzipInput(data []byte) ([]byte, error) {
 	var b bytes.Buffer
 	gz := gzip.NewWriter(&b)
 
@@ -87,7 +87,7 @@ func gzipInput(data []byte) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func zlibInput(data []byte) ([]byte, error) {
+func ZlibInput(data []byte) ([]byte, error) {
 	var b bytes.Buffer
 	z := zlib.NewWriter(&b)
 
@@ -107,7 +107,7 @@ func zlibInput(data []byte) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func brotliInput(data []byte) ([]byte, error) {
+func BrotliInput(data []byte) ([]byte, error) {
 	var b bytes.Buffer
 	z := brotli.NewWriter(&b)
 

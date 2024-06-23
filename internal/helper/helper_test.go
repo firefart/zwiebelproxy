@@ -1,4 +1,4 @@
-package main
+package helper
 
 import (
 	"os"
@@ -26,7 +26,7 @@ func TestSliceContains(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel() // marks each test case as capable of running in parallel with each other
 
-			res := sliceContains(tt.slice, tt.value)
+			res := SliceContains(tt.slice, tt.value)
 			assert.Equal(t, tt.expected, res)
 		})
 	}
@@ -50,13 +50,13 @@ func TestLookupEnvOrString(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			t.Parallel() // marks each test case as capable of running in parallel with each other
 
-			envName := randString(10)
+			envName := RandString(10)
 
 			if tt.setEnv {
 				os.Setenv(envName, tt.value)
 				defer os.Unsetenv(envName)
 			}
-			res := lookupEnvOrString(envName, tt.defaultValue)
+			res := LookupEnvOrString(envName, tt.defaultValue)
 			assert.Equal(t, tt.expected, res)
 		})
 	}
@@ -87,13 +87,13 @@ func TestLookupEnvOrBool(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			t.Parallel() // marks each test case as capable of running in parallel with each other
 
-			envName := randString(10)
+			envName := RandString(10)
 
 			if tt.setEnv {
 				os.Setenv(envName, tt.value)
 				defer os.Unsetenv(envName)
 			}
-			res := lookupEnvOrBool(envName, tt.defaultValue)
+			res := LookupEnvOrBool(envName, tt.defaultValue)
 			assert.Equal(t, tt.expected, res)
 		})
 	}
@@ -117,13 +117,13 @@ func TestLookupEnvOrDuration(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			t.Parallel() // marks each test case as capable of running in parallel with each other
 
-			envName := randString(10)
+			envName := RandString(10)
 
 			if tt.setEnv {
 				os.Setenv(envName, tt.value)
 				defer os.Unsetenv(envName)
 			}
-			res := lookupEnvOrDuration(envName, tt.defaultValue)
+			res := LookupEnvOrDuration(envName, tt.defaultValue)
 			assert.Equal(t, tt.expected, res)
 		})
 	}

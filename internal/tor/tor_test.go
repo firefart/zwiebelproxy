@@ -1,4 +1,4 @@
-package main
+package tor
 
 import (
 	"bytes"
@@ -38,7 +38,7 @@ func TestRewrite(t *testing.T) {
 				t.Error(err)
 				return
 			}
-			app := application{
+			tor := Tor{
 				domain: domain,
 				logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 			}
@@ -46,7 +46,7 @@ func TestRewrite(t *testing.T) {
 				In:  r,
 				Out: r.Clone(r.Context()),
 			}
-			app.rewrite(pr)
+			tor.Rewrite(pr)
 			assert.Empty(t, pr.Out.Header.Get("X-Forwarded-For"))
 			assert.Equal(t, tt.expectedHost, pr.Out.Host)
 			assert.Equal(t, tt.expectedScheme, pr.Out.URL.Scheme)
@@ -92,7 +92,7 @@ func TestRewriteWebRequest(t *testing.T) {
 			r.URL.RawPath = ""
 			r.Host = tt.host
 
-			app := application{
+			tor := Tor{
 				domain: domain,
 				logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 			}
@@ -100,7 +100,7 @@ func TestRewriteWebRequest(t *testing.T) {
 				In:  r,
 				Out: r.Clone(r.Context()),
 			}
-			app.rewrite(pr)
+			tor.Rewrite(pr)
 			assert.Empty(t, pr.Out.Header.Get("X-Forwarded-For"))
 			assert.Equal(t, tt.expectedHost, pr.Out.Host)
 			assert.Equal(t, tt.expectedScheme, pr.Out.URL.Scheme)
@@ -149,12 +149,12 @@ func TestModifyResponse(t *testing.T) {
 
 			resp.Body = io.NopCloser(bytes.NewBuffer(tt.body))
 
-			app := application{
+			tor := Tor{
 				domain: domain,
 				logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 			}
 
-			if err := app.modifyResponse(&resp); err != nil {
+			if err := tor.ModifyResponse(&resp); err != nil {
 				t.Error(err)
 				return
 			}

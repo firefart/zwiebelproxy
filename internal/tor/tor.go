@@ -1,4 +1,4 @@
-package main
+package tor
 
 import (
 	"bytes"
@@ -10,13 +10,44 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"regexp"
 	"strings"
+
+	"github.com/firefart/zwiebelproxy/internal/helper"
 
 	"github.com/andybalholm/brotli"
 )
 
-func (app *application) rewrite(r *httputil.ProxyRequest) {
-	domain := app.domain
+type Tor struct {
+	logger           *slog.Logger
+	domain           string
+	blacklistedwords map[string]*regexp.Regexp
+}
+
+func New(logger *slog.Logger, domain string, blacklistedWords string) (*Tor, error) {
+	t := Tor{
+		logger:           logger,
+		domain:           domain,
+		blacklistedwords: make(map[string]*regexp.Regexp),
+	}
+
+	for _, word := range strings.Split(blacklistedWords, ",") {
+		if word == "" {
+			continue
+		}
+		fullRegex := fmt.Sprintf(`(?i)\b%s\b`, regexp.QuoteMeta(word))
+		re, err := regexp.Compile(fullRegex)
+		if err != nil {
+			return nil, err
+		}
+		t.blacklistedwords[word] = re
+	}
+
+	return &t, nil
+}
+
+func (t *Tor) Rewrite(r *httputil.ProxyRequest) {
+	domain := t.domain
 	if !strings.HasPrefix(domain, ".") {
 		domain = fmt.Sprintf(".%s", domain)
 	}
@@ -61,23 +92,18 @@ func (app *application) rewrite(r *httputil.ProxyRequest) {
 	r.Out.URL.Scheme = scheme
 	r.Out.URL.Host = host
 
-	app.logger.Debug("modified request", slog.String("request", fmt.Sprintf("%+v", r.Out)))
+	t.logger.Debug("modified request", slog.String("request", fmt.Sprintf("%+v", r.Out)))
 }
 
 // modify the response
-func (app *application) proxyErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
-	app.logError(r.Context(), w, err, http.StatusBadGateway)
-}
-
-// modify the response
-func (app *application) modifyResponse(resp *http.Response) error {
-	app.logger.Debug("entered modifyResponse",
-		slog.String("url", sanitizeString(resp.Request.URL.String())),
+func (t *Tor) ModifyResponse(resp *http.Response) error {
+	t.logger.Debug("entered modifyResponse",
+		slog.String("url", helper.SanitizeString(resp.Request.URL.String())),
 		slog.Int("status-code", resp.StatusCode),
 		slog.String("headers", fmt.Sprintf("%#v", resp.Header)),
 	)
 
-	domain := app.domain
+	domain := t.domain
 	if !strings.HasPrefix(domain, ".") {
 		domain = fmt.Sprintf(".%s", domain)
 	}
@@ -101,7 +127,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition
 	contentDisp, ok := resp.Header["Content-Disposition"]
 	if ok && len(contentDisp) > 0 && strings.HasPrefix(contentDisp[0], "attachment") {
-		app.logger.Debug("detected file download, not attempting to modify body", slog.String("url", sanitizeString(resp.Request.URL.String())))
+		t.logger.Debug("detected file download, not attempting to modify body", slog.String("url", helper.SanitizeString(resp.Request.URL.String())))
 		return nil
 	}
 
@@ -124,15 +150,15 @@ func (app *application) modifyResponse(resp *http.Response) error {
 
 	contentType, ok := resp.Header["Content-Type"]
 	if !ok {
-		app.logger.Debug("no content type skipping replace", slog.String("url", sanitizeString(resp.Request.URL.String())))
+		t.logger.Debug("no content type skipping replace", slog.String("url", helper.SanitizeString(resp.Request.URL.String())))
 		return nil
 	}
 
 	if ok && len(contentType) > 0 {
 		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
 		cleanedUpContentType := strings.Split(contentType[0], ";")[0]
-		if !sliceContains(contentTypesForReplace, cleanedUpContentType) {
-			app.logger.Debug("did not replace because of content type", slog.String("url", sanitizeString(resp.Request.URL.String())), slog.String("content-type", cleanedUpContentType))
+		if !helper.SliceContains(contentTypesForReplace, cleanedUpContentType) {
+			t.logger.Debug("did not replace because of content type", slog.String("url", helper.SanitizeString(resp.Request.URL.String())), slog.String("content-type", cleanedUpContentType))
 			return nil
 		}
 	}
@@ -145,7 +171,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
 	switch {
 	case strings.EqualFold(contentEncoding, "gzip"):
-		app.logger.Debug("detected gzipped body", slog.String("url", sanitizeString(resp.Request.URL.String())))
+		t.logger.Debug("detected gzipped body", slog.String("url", helper.SanitizeString(resp.Request.URL.String())))
 		var err error
 		reader, err = gzip.NewReader(resp.Body)
 		if err != nil {
@@ -154,7 +180,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 		// resp.Header.Del("Content-Encoding")
 		usedGzip = true
 	case strings.EqualFold(contentEncoding, "deflate"):
-		app.logger.Debug("detected zlib body", slog.String("url", sanitizeString(resp.Request.URL.String())))
+		t.logger.Debug("detected zlib body", slog.String("url", helper.SanitizeString(resp.Request.URL.String())))
 		var err error
 		reader, err = zlib.NewReader(resp.Body)
 		if err != nil {
@@ -162,7 +188,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 		}
 		usedZlib = true
 	case strings.EqualFold(contentEncoding, "br"):
-		app.logger.Debug("detected brotli body", slog.String("url", sanitizeString(resp.Request.URL.String())))
+		t.logger.Debug("detected brotli body", slog.String("url", helper.SanitizeString(resp.Request.URL.String())))
 		reader = brotli.NewReader(resp.Body)
 		usedBrotli = true
 	default:
@@ -180,7 +206,7 @@ func (app *application) modifyResponse(resp *http.Response) error {
 	body = bytes.ReplaceAll(body, []byte(`.onion"`), []byte(fmt.Sprintf(`%s"`, domain)))
 	body = bytes.ReplaceAll(body, []byte(".onion<"), []byte(fmt.Sprintf("%s<", domain)))
 
-	for word, re := range app.blacklistedwords {
+	for word, re := range t.blacklistedwords {
 		if re.Match(body) {
 			return fmt.Errorf("access to the site is forbidden because it contains the blacklisted word %q", word)
 		}
@@ -188,22 +214,22 @@ func (app *application) modifyResponse(resp *http.Response) error {
 
 	// if we unpacked before, respect the client and repack the modified body (the header is still set)
 	if usedGzip {
-		app.logger.Debug("re gzipping body", slog.String("url", sanitizeString(resp.Request.URL.String())))
-		gzipped, err := gzipInput(body)
+		t.logger.Debug("re gzipping body", slog.String("url", helper.SanitizeString(resp.Request.URL.String())))
+		gzipped, err := helper.GzipInput(body)
 		if err != nil {
 			return fmt.Errorf("could not gzip body: %w", err)
 		}
 		body = gzipped
 	} else if usedZlib {
-		app.logger.Debug("re zlibbing body", slog.String("url", sanitizeString(resp.Request.URL.String())))
-		zlibed, err := zlibInput(body)
+		t.logger.Debug("re zlibbing body", slog.String("url", helper.SanitizeString(resp.Request.URL.String())))
+		zlibed, err := helper.ZlibInput(body)
 		if err != nil {
 			return fmt.Errorf("could not zlib body: %w", err)
 		}
 		body = zlibed
 	} else if usedBrotli {
-		app.logger.Debug("re brotliing body", slog.String("url", sanitizeString(resp.Request.URL.String())))
-		b, err := brotliInput(body)
+		t.logger.Debug("re brotliing body", slog.String("url", helper.SanitizeString(resp.Request.URL.String())))
+		b, err := helper.BrotliInput(body)
 		if err != nil {
 			return fmt.Errorf("could not brotli body: %w", err)
 		}

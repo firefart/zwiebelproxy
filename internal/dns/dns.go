@@ -1,4 +1,4 @@
-package main
+package dns
 
 import (
 	"context"
@@ -8,23 +8,23 @@ import (
 	"github.com/patrickmn/go-cache"
 )
 
-type dnsClient struct {
+type DnsClient struct {
 	cache    *cache.Cache
 	resolver *net.Resolver
 	timeout  time.Duration
 }
 
-func newDNSClient(timeout, dnsCacheTimeout time.Duration) *dnsClient {
+func NewDNSClient(timeout, dnsCacheTimeout time.Duration) *DnsClient {
 	var r *net.Resolver
 
-	return &dnsClient{
+	return &DnsClient{
 		cache:    cache.New(dnsCacheTimeout, 1*time.Hour),
 		resolver: r,
 		timeout:  timeout,
 	}
 }
 
-func (d *dnsClient) ipLookup(ctx context.Context, domain string) ([]string, error) {
+func (d *DnsClient) IPLookup(ctx context.Context, domain string) ([]string, error) {
 	val, found := d.cache.Get(domain)
 	if found {
 		return val.([]string), nil
