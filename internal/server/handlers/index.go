@@ -67,7 +67,9 @@ func (h *IndexHandler) Handler(c echo.Context) error {
 			w.WriteHeader(http.StatusBadGateway)
 			w.Header().Set("Content-Type", "text/html")
 			w.Header().Set("Connection", "close")
-			templates.Index(err.Error()).Render(r.Context(), w)
+			if err := templates.Index(err.Error()).Render(r.Context(), w); err != nil {
+				panic(err.Error())
+			}
 		},
 	}
 
