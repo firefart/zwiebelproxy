@@ -3,7 +3,7 @@ module github.com/firefart/zwiebelproxy
 go 1.22
 
 require (
-	github.com/a-h/templ v0.2.707
+	github.com/a-h/templ v0.2.731
 	github.com/andybalholm/brotli v1.1.0
 	github.com/charmbracelet/log v0.4.0
 	github.com/joho/godotenv v1.5.1
