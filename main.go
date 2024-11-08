@@ -34,7 +34,7 @@ func init() {
 
 func newLogger(debugMode, jsonOutput bool) *slog.Logger {
 	w := os.Stdout
-	var level = new(slog.LevelVar)
+	level := new(slog.LevelVar)
 	level.Set(slog.LevelInfo)
 
 	var replaceFunc func(groups []string, a slog.Attr) slog.Attr
@@ -157,7 +157,7 @@ func run(ctx context.Context, log *slog.Logger, opts cliOptions) error {
 	}
 
 	if !strings.HasPrefix(*opts.domain, ".") {
-		var a = fmt.Sprintf(".%s", *opts.domain)
+		a := fmt.Sprintf(".%s", *opts.domain)
 		opts.domain = &a
 	}
 
