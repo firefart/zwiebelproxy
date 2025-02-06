@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfiles/Dockerfile.tor
+    image: firefart/zwiebelproxy:tor-latest
     ports:
       - target: 9050
         host_ip: 127.0.0.1
@@ -26,6 +27,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfiles/Dockerfile.zwiebelproxy
+    image: firefart/zwiebelproxy:zwiebelproxy-latest
     restart: unless-stopped
     env_file: .env
     command: "--host 0.0.0.0 --tor socks5://tor:9050"
