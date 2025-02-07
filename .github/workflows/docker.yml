@@ -60,7 +60,7 @@ jobs:
         with:
           file: Dockerfiles/Dockerfile.zwiebelproxy
           push: true
-          #platforms: linux/amd64,linux/arm/v7,linux/arm64
+          platforms: linux/amd64,linux/arm/v7,linux/arm64/v8,linux/386,linux/ppc64le
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -69,6 +69,6 @@ jobs:
         with:
           file: Dockerfiles/Dockerfile.tor
           push: true
-          #platforms: linux/amd64,linux/arm/v7,linux/arm64
+          platforms: linux/amd64,linux/arm/v7,linux/arm64/v8,linux/386,linux/ppc64le
           tags: ${{ steps.meta_tor.outputs.tags }}
           labels: ${{ steps.meta_tor.outputs.labels }}
