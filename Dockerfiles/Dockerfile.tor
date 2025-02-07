@@ -1,4 +1,8 @@
 FROM alpine:latest
+LABEL org.opencontainers.image.authors="firefart <firefart@gmail.com>"
+LABEL org.opencontainers.image.title="Zwiebelproxy Tor"
+LABEL org.opencontainers.image.source="https://github.com/firefart/zwiebelproxy"
+LABEL org.opencontainers.image.description="tor container for zwiebelproxy"
 RUN apk update && apk add --no-cache tor
 COPY tor_config/torrc /etc/tor/torrc
 USER tor

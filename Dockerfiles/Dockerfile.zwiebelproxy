@@ -7,6 +7,10 @@ COPY . .
 RUN go build -a -o zwiebelproxy -ldflags="-s -w" -trimpath
 
 FROM alpine:latest
+LABEL org.opencontainers.image.authors="firefart <firefart@gmail.com>"
+LABEL org.opencontainers.image.title="Zwiebelproxy"
+LABEL org.opencontainers.image.source="https://github.com/firefart/zwiebelproxy"
+LABEL org.opencontainers.image.description="web based tor proxy written in go"
 RUN mkdir -p /app \
   && adduser -D zwiebel \
   && chown -R zwiebel:zwiebel /app
