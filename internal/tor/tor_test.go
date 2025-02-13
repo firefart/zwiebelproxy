@@ -40,7 +40,7 @@ func TestRewrite(t *testing.T) {
 			}
 			tor := Tor{
 				domain: domain,
-				logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+				logger: slog.New(slog.DiscardHandler),
 			}
 			pr := &httputil.ProxyRequest{
 				In:  r,
@@ -94,7 +94,7 @@ func TestRewriteWebRequest(t *testing.T) {
 
 			tor := Tor{
 				domain: domain,
-				logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+				logger: slog.New(slog.DiscardHandler),
 			}
 			pr := &httputil.ProxyRequest{
 				In:  r,
@@ -151,7 +151,7 @@ func TestModifyResponse(t *testing.T) {
 
 			tor := Tor{
 				domain: domain,
-				logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+				logger: slog.New(slog.DiscardHandler),
 			}
 
 			if err := tor.ModifyResponse(&resp); err != nil {

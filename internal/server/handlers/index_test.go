@@ -1,8 +1,6 @@
 package handlers_test
 
 import (
-	"context"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -20,8 +18,7 @@ import (
 func TestIndex(t *testing.T) {
 	t.Skip("this test is currently disabled until all mockings are implemented")
 
-	ctx := context.Background()
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 
 	file, err := os.CreateTemp("", "*.sqlite")
 	if err != nil {
@@ -30,7 +27,7 @@ func TestIndex(t *testing.T) {
 	defer os.Remove(file.Name())
 
 	tr := http.DefaultTransport.(*http.Transport)
-	e := server.NewServer(ctx, logger, false, false, false, "localhost.onion", "", "TEST", "TEST", 1*time.Minute, 1*time.Minute, nil, nil, nil, tr)
+	e := server.NewServer(t.Context(), logger, false, false, false, "localhost.onion", "", "TEST", "TEST", 1*time.Minute, 1*time.Minute, nil, nil, nil, tr)
 	x, ok := e.(*echo.Echo)
 	require.True(t, ok)
 	req := httptest.NewRequest(http.MethodGet, "https://test.localhost.onion", nil)

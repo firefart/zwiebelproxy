@@ -11,15 +11,15 @@ tasks:
   update:
     cmds:
       - go get -u
+      - go get -u tool
       - go mod tidy -v
 
   templ:
     cmds:
-      - templ generate
+      - go tool templ generate
 
   setup:
     cmds:
-      - go install github.com/a-h/templ/cmd/templ@latest
       - go install github.com/air-verse/air@latest
 
   build:
@@ -29,7 +29,7 @@ tasks:
       CGO_ENABLED: 0
     cmds:
       - go fmt ./...
-      - templ fmt .
+      - go tool templ fmt .
       - go vet ./...
       - go build -o {{.PROGRAM}}
 
