@@ -9,8 +9,7 @@
     "ghcr.io/devcontainers-contrib/features/go-task:1": {}
   },
   "postCreateCommand": {
-    "install dependencies": "task setup",
-    "install required modules": "go mod download"
+    "install dependencies": "task deps"
   },
   "customizations": {
     "vscode": {

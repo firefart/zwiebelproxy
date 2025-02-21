@@ -18,10 +18,6 @@ tasks:
     cmds:
       - go tool templ generate
 
-  setup:
-    cmds:
-      - go install github.com/air-verse/air@latest
-
   build:
     aliases: [default]
     deps: [deps, templ]
