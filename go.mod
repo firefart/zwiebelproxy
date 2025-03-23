@@ -3,7 +3,7 @@ module github.com/firefart/zwiebelproxy
 go 1.24
 
 require (
-	github.com/a-h/templ v0.3.833
+	github.com/a-h/templ v0.3.856
 	github.com/andybalholm/brotli v1.1.1
 	github.com/charmbracelet/log v0.4.1
 	github.com/joho/godotenv v1.5.1
@@ -16,12 +16,10 @@ require (
 
 require (
 	dario.cat/mergo v1.0.1 // indirect
-	github.com/PuerkitoBio/goquery v1.10.2 // indirect
 	github.com/a-h/parse v0.0.0-20250122154542-74294addb73e // indirect
 	github.com/air-verse/air v1.61.7 // indirect
-	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/bep/godartsass/v2 v2.4.0 // indirect
+	github.com/bep/godartsass/v2 v2.4.1 // indirect
 	github.com/bep/golibsass v1.2.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc // indirect
@@ -30,7 +28,6 @@ require (
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/cli/browser v1.3.0 // indirect
-	github.com/cli/safeexec v1.0.1 // indirect
 	github.com/creack/pty v1.1.24 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.18.0 // indirect
