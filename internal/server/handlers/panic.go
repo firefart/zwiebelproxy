@@ -30,11 +30,12 @@ func (h *PanicHandler) Handler(c echo.Context) error {
 	}
 
 	headerValue := c.Request().Header.Get(h.secretKeyHeaderName)
-	if headerValue == "" {
+	switch headerValue {
+	case "":
 		h.logger.Error("test_panic called without secret header")
-	} else if headerValue == h.secretKeyHeaderValue {
+	case h.secretKeyHeaderValue:
 		panic("test")
-	} else {
+	default:
 		h.logger.Error("test_panic called without valid header")
 	}
 	return c.NoContent(http.StatusOK)

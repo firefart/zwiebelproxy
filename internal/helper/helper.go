@@ -62,8 +62,8 @@ func SliceContains(slice []string, value string) bool {
 }
 
 func SanitizeString(in string) string {
-	escaped := strings.Replace(in, "\n", "", -1)
-	escaped = strings.Replace(escaped, "\r", "", -1)
+	escaped := strings.ReplaceAll(in, "\n", "")
+	escaped = strings.ReplaceAll(escaped, "\r", "")
 	return escaped
 }
 
