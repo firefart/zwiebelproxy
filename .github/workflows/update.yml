@@ -45,7 +45,7 @@ jobs:
           if [ $exit_status -eq 0 ]; then
             echo "nothing has changed"
           else
-            git add go.mod go.sum
+            git add .
             git commit -m "auto update from github actions"
             git push origin main
           fi
