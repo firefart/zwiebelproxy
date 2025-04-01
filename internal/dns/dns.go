@@ -2,32 +2,37 @@ package dns
 
 import (
 	"context"
+	"errors"
 	"net"
 	"time"
 
 	"github.com/patrickmn/go-cache"
 )
 
-type DnsClient struct {
+type Client struct {
 	cache    *cache.Cache
 	resolver *net.Resolver
 	timeout  time.Duration
 }
 
-func NewDNSClient(timeout, dnsCacheTimeout time.Duration) *DnsClient {
+func NewDNSClient(timeout, dnsCacheTimeout time.Duration) *Client {
 	var r *net.Resolver
 
-	return &DnsClient{
+	return &Client{
 		cache:    cache.New(dnsCacheTimeout, 1*time.Hour),
 		resolver: r,
 		timeout:  timeout,
 	}
 }
 
-func (d *DnsClient) IPLookup(ctx context.Context, domain string) ([]string, error) {
+func (d *Client) IPLookup(ctx context.Context, domain string) ([]string, error) {
 	val, found := d.cache.Get(domain)
 	if found {
-		return val.([]string), nil
+		x, ok := val.([]string)
+		if !ok {
+			return nil, errors.New("cache value is not a string slice")
+		}
+		return x, nil
 	}
 
 	ctx2, cancel := context.WithTimeout(ctx, d.timeout)

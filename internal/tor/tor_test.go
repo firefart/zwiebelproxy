@@ -29,7 +29,6 @@ func TestRewrite(t *testing.T) {
 		{fmt.Sprintf("https://asdf.%s:8008/1234", domain), "8008", "https", "asdf.onion:8008"},
 	}
 	for _, tt := range tests {
-		tt := tt // NOTE: https://github.com/golang/go/wiki/CommonMistakes#using-goroutines-on-loop-iterator-variables
 		t.Run(tt.url, func(t *testing.T) {
 			t.Parallel() // marks each test case as capable of running in parallel with each other
 
@@ -75,7 +74,6 @@ func TestRewriteWebRequest(t *testing.T) {
 		{"/1234", fmt.Sprintf("asdf.%s:443", domain), "", "https", "asdf.onion"},
 	}
 	for _, tt := range tests {
-		tt := tt // NOTE: https://github.com/golang/go/wiki/CommonMistakes#using-goroutines-on-loop-iterator-variables
 		t.Run("", func(t *testing.T) {
 			t.Parallel() // marks each test case as capable of running in parallel with each other
 
@@ -127,12 +125,11 @@ func TestModifyResponse(t *testing.T) {
 		{"octet-stream", false, "application/octet-stream", body},
 	}
 	for _, tt := range tests {
-		tt := tt // NOTE: https://github.com/golang/go/wiki/CommonMistakes#using-goroutines-on-loop-iterator-variables
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
 			resp := http.Response{
-				StatusCode: 200,
+				StatusCode: http.StatusOK,
 				Request: &http.Request{
 					URL: &url.URL{},
 				},

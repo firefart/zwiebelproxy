@@ -15,7 +15,7 @@ import (
 
 type server struct {
 	logger          *slog.Logger
-	dnsClient       *dns.DnsClient
+	dnsClient       *dns.Client
 	allowedHosts    []string
 	allowedIPs      []string
 	allowedIPRanges []netip.Prefix
@@ -50,11 +50,12 @@ func NewServer(ctx context.Context,
 	e.Debug = debug
 	e.HTTPErrorHandler = s.customHTTPErrorHandler
 
-	if cloudflare {
+	switch {
+	case cloudflare:
 		e.IPExtractor = extractIPFromCloudflareHeader()
-	} else if revProxy {
+	case revProxy:
 		e.IPExtractor = echo.ExtractIPFromXFFHeader()
-	} else {
+	default:
 		e.IPExtractor = echo.ExtractIPDirect()
 	}
 

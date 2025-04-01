@@ -22,7 +22,11 @@ func (s *server) customHTTPErrorHandler(err error, c echo.Context) {
 	var echoError *echo.HTTPError
 	if errors.As(err, &echoError) {
 		statusCode = echoError.Code
-		message = echoError.Message.(string)
+		var ok bool
+		message, ok = echoError.Message.(string)
+		if !ok {
+			message = "An internal error occured."
+		}
 	}
 
 	// ignore 404 and stuff

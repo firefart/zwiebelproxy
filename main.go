@@ -25,13 +25,6 @@ import (
 	"go.uber.org/automaxprocs/maxprocs"
 )
 
-func init() {
-	// added in init to prevent the forced logline
-	if _, err := maxprocs.Set(); err != nil {
-		panic(fmt.Sprintf("Error on gomaxprocs: %v\n", err))
-	}
-}
-
 func newLogger(debugMode, jsonOutput bool) *slog.Logger {
 	w := os.Stdout
 	level := new(slog.LevelVar)
@@ -47,7 +40,10 @@ func newLogger(debugMode, jsonOutput bool) *slog.Logger {
 		}
 		replaceFunc = func(_ []string, a slog.Attr) slog.Attr {
 			if a.Key == slog.SourceKey {
-				source := a.Value.Any().(*slog.Source)
+				source, ok := a.Value.Any().(*slog.Source)
+				if !ok {
+					return a
+				}
 				// remove current working directory and only leave the relative path to the program
 				if file, ok := strings.CutPrefix(source.File, wd); ok {
 					source.File = file
@@ -58,20 +54,21 @@ func newLogger(debugMode, jsonOutput bool) *slog.Logger {
 	}
 
 	var handler slog.Handler
-	if jsonOutput {
+	switch {
+	case jsonOutput:
 		handler = slog.NewJSONHandler(w, &slog.HandlerOptions{
 			Level:       level,
 			AddSource:   debugMode,
 			ReplaceAttr: replaceFunc,
 		})
-	} else if !isatty.IsTerminal(w.Fd()) {
+	case !isatty.IsTerminal(w.Fd()):
 		// running as a service
 		handler = slog.NewTextHandler(w, &slog.HandlerOptions{
 			Level:       level,
 			AddSource:   debugMode,
 			ReplaceAttr: replaceFunc,
 		})
-	} else {
+	default:
 		// pretty output
 		l := log.InfoLevel
 		if debugMode {
@@ -109,9 +106,13 @@ type cliOptions struct {
 }
 
 func main() {
+	if _, err := maxprocs.Set(); err != nil {
+		panic(fmt.Sprintf("Error on gomaxprocs: %v\n", err))
+	}
+
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Printf("could not load .env file: %v. continuing without\n", err)
+		fmt.Printf("could not load .env file: %v. continuing without\n", err) // nolint:forbidigo
 	}
 
 	var opts cliOptions
@@ -153,7 +154,7 @@ func run(ctx context.Context, log *slog.Logger, opts cliOptions) error {
 	defer cancel()
 
 	if len(*opts.domain) == 0 {
-		return fmt.Errorf("please provide a domain")
+		return errors.New("please provide a domain")
 	}
 
 	if !strings.HasPrefix(*opts.domain, ".") {
@@ -163,13 +164,16 @@ func run(ctx context.Context, log *slog.Logger, opts cliOptions) error {
 
 	torProxyURL, err := url.Parse(*opts.tor)
 	if err != nil {
-		return fmt.Errorf("invalid proxy url %s: %v", *opts.tor, err)
+		return fmt.Errorf("invalid proxy url %s: %w", *opts.tor, err)
 	}
 
 	// used to clone the default transport
-	tr := http.DefaultTransport.(*http.Transport)
+	tr, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return errors.New("unable to cast default transport to http.Transport")
+	}
 	tr.Proxy = http.ProxyURL(torProxyURL)
-	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // nolint:gosec
 	tr.TLSHandshakeTimeout = *opts.timeout
 	tr.ExpectContinueTimeout = *opts.timeout
 	tr.ResponseHeaderTimeout = *opts.timeout
@@ -194,12 +198,14 @@ func run(ctx context.Context, log *slog.Logger, opts cliOptions) error {
 	s := server.NewServer(ctx, log, *opts.cloudflare, *opts.revProxy, *opts.debug, *opts.domain, *opts.blacklistedWords, *opts.secretKeyHeaderName, *opts.secretKeyHeaderValue, *opts.timeout, *opts.dnsCacheTimeout, allowedHosts, allowedIPs, allowedIPRanges, tr)
 
 	httpSrv := &http.Server{
-		Addr:    net.JoinHostPort(*opts.host, *opts.httpPort),
-		Handler: s,
+		Addr:              net.JoinHostPort(*opts.host, *opts.httpPort),
+		Handler:           s,
+		ReadHeaderTimeout: *opts.timeout,
 	}
 	httpsSrv := &http.Server{
-		Addr:    net.JoinHostPort(*opts.host, *opts.httpsPort),
-		Handler: s,
+		Addr:              net.JoinHostPort(*opts.host, *opts.httpsPort),
+		Handler:           s,
+		ReadHeaderTimeout: *opts.timeout,
 	}
 	log.Info("starting server", slog.String("http", httpSrv.Addr), slog.String("https", httpsSrv.Addr))
 
@@ -229,10 +235,10 @@ func run(ctx context.Context, log *slog.Logger, opts cliOptions) error {
 
 	ctx, cancel2 := context.WithTimeout(context.Background(), *opts.wait)
 	defer cancel2()
-	if err := httpSrv.Shutdown(ctx); err != http.ErrServerClosed {
+	if err := httpSrv.Shutdown(ctx); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
-	if err := httpsSrv.Shutdown(ctx); err != http.ErrServerClosed {
+	if err := httpsSrv.Shutdown(ctx); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 	log.Info("shutting down")

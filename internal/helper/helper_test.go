@@ -1,7 +1,7 @@
 package helper
 
 import (
-	"os"
+	"crypto/rand"
 	"testing"
 	"time"
 
@@ -22,7 +22,6 @@ func TestSliceContains(t *testing.T) {
 		{"empty string positive", []string{"", "1", "2", "3"}, "", true},
 	}
 	for _, tt := range tests {
-		tt := tt // NOTE: https://github.com/golang/go/wiki/CommonMistakes#using-goroutines-on-loop-iterator-variables
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel() // marks each test case as capable of running in parallel with each other
 
@@ -33,7 +32,6 @@ func TestSliceContains(t *testing.T) {
 }
 
 func TestLookupEnvOrString(t *testing.T) {
-	t.Parallel()
 	tests := []struct {
 		setEnv       bool
 		value        string
@@ -46,15 +44,11 @@ func TestLookupEnvOrString(t *testing.T) {
 		{setEnv: false, value: "", defaultValue: "", expected: ""},
 	}
 	for _, tt := range tests {
-		tt := tt // NOTE: https://github.com/golang/go/wiki/CommonMistakes#using-goroutines-on-loop-iterator-variables
 		t.Run("", func(t *testing.T) {
-			t.Parallel() // marks each test case as capable of running in parallel with each other
-
-			envName := RandString(10)
+			envName := rand.Text()
 
 			if tt.setEnv {
-				os.Setenv(envName, tt.value)
-				defer os.Unsetenv(envName)
+				t.Setenv(envName, tt.value)
 			}
 			res := LookupEnvOrString(envName, tt.defaultValue)
 			assert.Equal(t, tt.expected, res)
@@ -63,7 +57,6 @@ func TestLookupEnvOrString(t *testing.T) {
 }
 
 func TestLookupEnvOrBool(t *testing.T) {
-	t.Parallel()
 	tests := []struct {
 		setEnv       bool
 		value        string
@@ -83,15 +76,11 @@ func TestLookupEnvOrBool(t *testing.T) {
 		{setEnv: false, value: "", defaultValue: true, expected: true},
 	}
 	for _, tt := range tests {
-		tt := tt // NOTE: https://github.com/golang/go/wiki/CommonMistakes#using-goroutines-on-loop-iterator-variables
 		t.Run("", func(t *testing.T) {
-			t.Parallel() // marks each test case as capable of running in parallel with each other
-
-			envName := RandString(10)
+			envName := rand.Text()
 
 			if tt.setEnv {
-				os.Setenv(envName, tt.value)
-				defer os.Unsetenv(envName)
+				t.Setenv(envName, tt.value)
 			}
 			res := LookupEnvOrBool(envName, tt.defaultValue)
 			assert.Equal(t, tt.expected, res)
@@ -100,7 +89,6 @@ func TestLookupEnvOrBool(t *testing.T) {
 }
 
 func TestLookupEnvOrDuration(t *testing.T) {
-	t.Parallel()
 	tests := []struct {
 		setEnv       bool
 		value        string
@@ -113,15 +101,11 @@ func TestLookupEnvOrDuration(t *testing.T) {
 		{setEnv: false, value: "", defaultValue: 10 * time.Minute, expected: 10 * time.Minute},
 	}
 	for _, tt := range tests {
-		tt := tt // NOTE: https://github.com/golang/go/wiki/CommonMistakes#using-goroutines-on-loop-iterator-variables
 		t.Run("", func(t *testing.T) {
-			t.Parallel() // marks each test case as capable of running in parallel with each other
-
-			envName := RandString(10)
+			envName := rand.Text()
 
 			if tt.setEnv {
-				os.Setenv(envName, tt.value)
-				defer os.Unsetenv(envName)
+				t.Setenv(envName, tt.value)
 			}
 			res := LookupEnvOrDuration(envName, tt.defaultValue)
 			assert.Equal(t, tt.expected, res)

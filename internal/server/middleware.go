@@ -15,9 +15,9 @@ import (
 
 func (s *server) middlewareRecover() echo.MiddlewareFunc {
 	return middleware.RecoverWithConfig(middleware.RecoverConfig{
-		LogErrorFunc: func(c echo.Context, err error, stack []byte) error {
+		LogErrorFunc: func(_ echo.Context, err error, stack []byte) error {
 			// send the error to the default error handler
-			return fmt.Errorf("PANIC! %v - %s", err, string(stack))
+			return fmt.Errorf("PANIC! %w - %s", err, string(stack))
 		},
 	})
 }
@@ -34,7 +34,7 @@ func (s *server) middlewareRequestLogger(ctx context.Context) echo.MiddlewareFun
 		LogResponseSize:  true,
 		LogError:         true,
 		HandleError:      true, // forwards error to the global error handler, so it can decide appropriate status code
-		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+		LogValuesFunc: func(_ echo.Context, v middleware.RequestLoggerValues) error {
 			logLevel := slog.LevelInfo
 			errString := ""
 			// only set error on real errors

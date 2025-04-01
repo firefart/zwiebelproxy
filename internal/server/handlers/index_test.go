@@ -20,7 +20,7 @@ func TestIndex(t *testing.T) {
 
 	logger := slog.New(slog.DiscardHandler)
 
-	file, err := os.CreateTemp("", "*.sqlite")
+	file, err := os.CreateTemp(t.TempDir(), "*.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestIndex(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "https://test.localhost.onion", nil)
 	rec := httptest.NewRecorder()
 	cont := x.NewContext(req, rec)
-	require.Nil(t, handlers.NewIndexHandler(logger, false, "localhost.onion", "", tr, 1*time.Minute).Handler(cont))
+	require.NoError(t, handlers.NewIndexHandler(logger, false, "localhost.onion", "", tr, 1*time.Minute).Handler(cont))
 	require.Equal(t, http.StatusOK, rec.Code) //
 	require.Greater(t, len(rec.Body.String()), 10)
 }

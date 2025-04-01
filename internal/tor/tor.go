@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/firefart/zwiebelproxy/internal/helper"
@@ -74,13 +75,13 @@ func (t *Tor) Rewrite(r *httputil.ProxyRequest) {
 		} else {
 			switch port {
 			case "":
-				scheme = "http"
+				scheme = "http" // nolint:goconst
 			case "80":
-				scheme = "http"
+				scheme = "http" // nolint:goconst
 			case "443":
-				scheme = "https"
+				scheme = "https" // nolint:goconst
 			default:
-				scheme = "http"
+				scheme = "http" // nolint:goconst
 			}
 		}
 	}
@@ -213,21 +214,22 @@ func (t *Tor) ModifyResponse(resp *http.Response) error {
 	}
 
 	// if we unpacked before, respect the client and repack the modified body (the header is still set)
-	if usedGzip {
+	switch {
+	case usedGzip:
 		t.logger.Debug("re gzipping body", slog.String("url", helper.SanitizeString(resp.Request.URL.String())))
 		gzipped, err := helper.GzipInput(body)
 		if err != nil {
 			return fmt.Errorf("could not gzip body: %w", err)
 		}
 		body = gzipped
-	} else if usedZlib {
+	case usedZlib:
 		t.logger.Debug("re zlibbing body", slog.String("url", helper.SanitizeString(resp.Request.URL.String())))
 		zlibed, err := helper.ZlibInput(body)
 		if err != nil {
 			return fmt.Errorf("could not zlib body: %w", err)
 		}
 		body = zlibed
-	} else if usedBrotli {
+	case usedBrotli:
 		t.logger.Debug("re brotliing body", slog.String("url", helper.SanitizeString(resp.Request.URL.String())))
 		b, err := helper.BrotliInput(body)
 		if err != nil {
@@ -240,6 +242,6 @@ func (t *Tor) ModifyResponse(resp *http.Response) error {
 	resp.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	// update the content-length to our new body
-	resp.Header["Content-Length"] = []string{fmt.Sprint(len(body))}
+	resp.Header["Content-Length"] = []string{strconv.Itoa(len(body))}
 	return nil
 }
