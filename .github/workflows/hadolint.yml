@@ -2,7 +2,7 @@ name: Hadolint
 on:
   push:
     paths:
-      - "**/Dockerfile"
+      - "**/Dockerfile.*"
   pull_request:
   workflow_dispatch:
 jobs:
