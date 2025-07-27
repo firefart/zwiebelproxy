@@ -47,6 +47,7 @@ linters:
     - predeclared
     - promlinter
     - protogetter
+    - reassign
     - recvcheck
     - revive
     - rowserrcheck
@@ -137,6 +138,9 @@ linters:
       skip-single-param: true
     perfsprint:
       strconcat: false
+    reassign:
+      patterns:
+        - .*
     rowserrcheck:
       packages:
         - github.com/jmoiron/sqlx
@@ -164,6 +168,9 @@ linters:
           - noctx
           - wrapcheck
         path: _test\.go
+      - linters:
+          - noctx
+        text: "log/slog.Logger"
     paths:
       - third_party$
       - builtin$
