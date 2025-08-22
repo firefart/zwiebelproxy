@@ -21,8 +21,6 @@ import (
 	"github.com/firefart/zwiebelproxy/internal/server"
 	"github.com/joho/godotenv"
 	"github.com/mattn/go-isatty"
-
-	"go.uber.org/automaxprocs/maxprocs"
 )
 
 func newLogger(debugMode, jsonOutput bool) *slog.Logger {
@@ -106,10 +104,6 @@ type cliOptions struct {
 }
 
 func main() {
-	if _, err := maxprocs.Set(); err != nil {
-		panic(fmt.Sprintf("Error on gomaxprocs: %v\n", err))
-	}
-
 	err := godotenv.Load()
 	if err != nil {
 		fmt.Printf("could not load .env file: %v. continuing without\n", err) // nolint:forbidigo
