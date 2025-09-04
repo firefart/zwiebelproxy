@@ -11,13 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: hadolint/hadolint-action@v3.1.0
+      - uses: hadolint/hadolint-action@v3.2.0
         with:
           dockerfile: Dockerfiles/Dockerfile.tor
           # DL3007: Using latest is prone to errors if the image will ever update. Pin the version explicitly to a release tag
           # DL3018  Pin versions in apk add. Instead of `apk add <package>` use `apk add <package>=<version>`
           ignore: DL3007,DL3018
-      - uses: hadolint/hadolint-action@v3.1.0
+      - uses: hadolint/hadolint-action@v3.2.0
         with:
           dockerfile: Dockerfiles/Dockerfile.zwiebelproxy
           # DL3007: Using latest is prone to errors if the image will ever update. Pin the version explicitly to a release tag
