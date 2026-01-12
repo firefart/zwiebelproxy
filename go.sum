@@ -70,8 +70,8 @@ github.com/clbanning/mxj/v2 v2.7.0 h1:WA/La7UGCanFe5NpHF0Q3DNtnCsVoxbPKuyBNHWRyM
 github.com/clbanning/mxj/v2 v2.7.0/go.mod h1:hNiWqW14h+kc+MdF9C6/YoRfjEJoR3ou6tn/Qo+ve2s=
 github.com/cli/browser v1.3.0 h1:LejqCrpWr+1pRqmEPDGnTZOjsMe7sehifLynZJuqJpo=
 github.com/cli/browser v1.3.0/go.mod h1:HH8s+fOAxjhQoBUAsKuPCbqUuxZDhQ2/aD+SzsEfBTk=
-github.com/clipperhouse/displaywidth v0.6.2 h1:ZDpTkFfpHOKte4RG5O/BOyf3ysnvFswpyYrV7z2uAKo=
-github.com/clipperhouse/displaywidth v0.6.2/go.mod h1:R+kHuzaYWFkTm7xoMmK1lFydbci4X2CicfbGstSGg0o=
+github.com/clipperhouse/displaywidth v0.7.0 h1:QNv1GYsnLX9QBrcWUtMlogpTXuM5FVnBwKWp1O5NwmE=
+github.com/clipperhouse/displaywidth v0.7.0/go.mod h1:R+kHuzaYWFkTm7xoMmK1lFydbci4X2CicfbGstSGg0o=
 github.com/clipperhouse/stringish v0.1.1 h1:+NSqMOr3GR6k1FdRhhnXrLfztGzuG+VuFDfatpWHKCs=
 github.com/clipperhouse/stringish v0.1.1/go.mod h1:v/WhFtE1q0ovMta2+m+UbpZ+2/HEXNWYXQgCt4hdOzA=
 github.com/clipperhouse/uax29/v2 v2.3.0 h1:SNdx9DVUqMoBuBoW3iLOj4FQv3dN5mDtuqwuhIGpJy4=
@@ -113,8 +113,8 @@ github.com/gohugoio/hashstructure v0.6.0 h1:7wMB/2CfXoThFYhdWRGv3u3rUM761Cq29CxU
 github.com/gohugoio/hashstructure v0.6.0/go.mod h1:lapVLk9XidheHG1IQ4ZSbyYrXcaILU1ZEP/+vno5rBQ=
 github.com/gohugoio/httpcache v0.8.0 h1:hNdsmGSELztetYCsPVgjA960zSa4dfEqqF/SficorCU=
 github.com/gohugoio/httpcache v0.8.0/go.mod h1:fMlPrdY/vVJhAriLZnrF5QpN3BNAcoBClgAyQd+lGFI=
-github.com/gohugoio/hugo v0.154.4 h1:NQvxikoTlemjbagp83KMjGnjLTU0dq+ZT6L/qGE1gBE=
-github.com/gohugoio/hugo v0.154.4/go.mod h1:K7VH6L2JNe/tPtceyuJO4JN7QePnamMlT5O+KvEkCnA=
+github.com/gohugoio/hugo v0.154.5 h1:F35Vf/K6KM+bSV4H4sVduf4xPOZ+mFR+xdyrZTJ4ATA=
+github.com/gohugoio/hugo v0.154.5/go.mod h1:K7VH6L2JNe/tPtceyuJO4JN7QePnamMlT5O+KvEkCnA=
 github.com/gohugoio/hugo-goldmark-extensions/extras v0.5.0 h1:dco+7YiOryRoPOMXwwaf+kktZSCtlFtreNdiJbETvYE=
 github.com/gohugoio/hugo-goldmark-extensions/extras v0.5.0/go.mod h1:CRrxQTKeM3imw+UoS4EHKyrqB7Zp6sAJiqHit+aMGTE=
 github.com/gohugoio/hugo-goldmark-extensions/passthrough v0.3.1 h1:nUzXfRTszLliZuN0JTKeunXTRaiFX6ksaWP0puLLYAY=
