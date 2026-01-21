@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
 type PanicHandler struct {
@@ -23,7 +23,7 @@ func NewPanicHandler(logger *slog.Logger, debug bool, secretKeyHeaderName, secre
 	}
 }
 
-func (h *PanicHandler) Handler(c echo.Context) error {
+func (h *PanicHandler) Handler(c *echo.Context) error {
 	// no checks in debug mode
 	if h.debug {
 		panic("test")

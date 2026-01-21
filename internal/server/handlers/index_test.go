@@ -10,7 +10,7 @@ import (
 
 	"github.com/firefart/zwiebelproxy/internal/server"
 	"github.com/firefart/zwiebelproxy/internal/server/handlers"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/require"
 )
 

@@ -2,24 +2,18 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
 	"net/netip"
 	"strings"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
 )
 
 func (s *server) middlewareRecover() echo.MiddlewareFunc {
-	return middleware.RecoverWithConfig(middleware.RecoverConfig{
-		LogErrorFunc: func(_ echo.Context, err error, stack []byte) error {
-			// send the error to the default error handler
-			return fmt.Errorf("PANIC! %w - %s", err, string(stack))
-		},
-	})
+	return middleware.Recover()
 }
 
 func (s *server) middlewareRequestLogger(ctx context.Context) echo.MiddlewareFunc {
@@ -32,9 +26,8 @@ func (s *server) middlewareRequestLogger(ctx context.Context) echo.MiddlewareFun
 		LogMethod:        true,
 		LogContentLength: true,
 		LogResponseSize:  true,
-		LogError:         true,
 		HandleError:      true, // forwards error to the global error handler, so it can decide appropriate status code
-		LogValuesFunc: func(_ echo.Context, v middleware.RequestLoggerValues) error {
+		LogValuesFunc: func(_ *echo.Context, v middleware.RequestLoggerValues) error {
 			logLevel := slog.LevelInfo
 			errString := ""
 			// only set error on real errors
@@ -59,7 +52,7 @@ func (s *server) middlewareRequestLogger(ctx context.Context) echo.MiddlewareFun
 }
 
 func (s *server) xHeaderMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
+	return func(c *echo.Context) error {
 		r := c.Request()
 		for headerName, headerValue := range r.Header {
 			switch strings.ToLower(headerName) {
@@ -102,7 +95,7 @@ func (s *server) xHeaderMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 func (s *server) ipAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
+	return func(c *echo.Context) error {
 		if len(s.allowedHosts) == 0 && len(s.allowedIPs) == 0 && len(s.allowedIPRanges) == 0 {
 			// configured as a public server, no ip checks
 			return next(c)
