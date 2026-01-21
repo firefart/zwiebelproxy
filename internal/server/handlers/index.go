@@ -12,7 +12,7 @@ import (
 
 	"github.com/firefart/zwiebelproxy/internal/server/templates"
 	"github.com/firefart/zwiebelproxy/internal/tor"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
 type IndexHandler struct {
@@ -35,7 +35,7 @@ func NewIndexHandler(logger *slog.Logger, debug bool, domain string, blacklisted
 	}
 }
 
-func (h *IndexHandler) Handler(c echo.Context) error {
+func (h *IndexHandler) Handler(c *echo.Context) error {
 	r := c.Request()
 	host, _, err := net.SplitHostPort(r.Host)
 	if err != nil {
@@ -79,6 +79,12 @@ func (h *IndexHandler) Handler(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(r.Context(), h.timeout)
 	defer cancel()
 	r = r.WithContext(ctx)
-	proxy.ServeHTTP(c.Response().Writer, r)
+
+	res, err := echo.UnwrapResponse(c.Response())
+	if err != nil {
+		return fmt.Errorf("could not unwrap response: %w", err)
+	}
+
+	proxy.ServeHTTP(res, r)
 	return nil
 }

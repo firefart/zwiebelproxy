@@ -9,8 +9,8 @@ import (
 
 	"github.com/firefart/zwiebelproxy/internal/dns"
 	"github.com/firefart/zwiebelproxy/internal/server/handlers"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
 )
 
 type server struct {
@@ -46,8 +46,6 @@ func NewServer(ctx context.Context,
 	}
 
 	e := echo.New()
-	e.HideBanner = true
-	e.Debug = debug
 	e.HTTPErrorHandler = s.customHTTPErrorHandler
 
 	switch {

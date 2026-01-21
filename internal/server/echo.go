@@ -7,14 +7,16 @@ import (
 
 	"github.com/firefart/zwiebelproxy/internal/server/handlers"
 	"github.com/firefart/zwiebelproxy/internal/server/templates"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
 var cloudflareIPHeaderName = http.CanonicalHeaderKey("CF-Connecting-IP")
 
-func (s *server) customHTTPErrorHandler(err error, c echo.Context) {
-	if c.Response().Committed {
-		return
+func (s *server) customHTTPErrorHandler(c *echo.Context, err error) {
+	if resp, uErr := echo.UnwrapResponse(c.Response()); uErr == nil {
+		if resp.Committed {
+			return // response has been already sent to the client by handler or some middleware
+		}
 	}
 
 	statusCode := http.StatusInternalServerError
@@ -22,11 +24,7 @@ func (s *server) customHTTPErrorHandler(err error, c echo.Context) {
 	var echoError *echo.HTTPError
 	if errors.As(err, &echoError) {
 		statusCode = echoError.Code
-		var ok bool
-		message, ok = echoError.Message.(string)
-		if !ok {
-			message = "An internal error occured."
-		}
+		message = echoError.Message
 	}
 
 	// ignore 404 and stuff
