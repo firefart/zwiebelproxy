@@ -22,7 +22,13 @@ func (s *server) customHTTPErrorHandler(c *echo.Context, err error) {
 	statusCode := http.StatusInternalServerError
 	message := "An internal error occured."
 	var echoError *echo.HTTPError
-	if errors.As(err, &echoError) {
+	var sc echo.HTTPStatusCoder
+	switch {
+	case errors.As(err, &sc):
+		if tmp := sc.StatusCode(); tmp != 0 {
+			statusCode = tmp
+		}
+	case errors.As(err, &echoError):
 		statusCode = echoError.Code
 		message = echoError.Message
 	}
