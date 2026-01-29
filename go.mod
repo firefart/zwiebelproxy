@@ -7,7 +7,7 @@ require (
 	github.com/andybalholm/brotli v1.2.0
 	github.com/charmbracelet/log v0.4.2
 	github.com/joho/godotenv v1.5.1
-	github.com/labstack/echo/v5 v5.0.0
+	github.com/labstack/echo/v5 v5.0.1
 	github.com/mattn/go-isatty v0.0.20
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/stretchr/testify v1.11.1
@@ -38,7 +38,7 @@ require (
 	github.com/go-logfmt/logfmt v0.6.1 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gohugoio/hashstructure v0.6.0 // indirect
-	github.com/gohugoio/hugo v0.154.5 // indirect
+	github.com/gohugoio/hugo v0.155.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
