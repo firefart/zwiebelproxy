@@ -30,7 +30,7 @@ require (
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/cli/browser v1.3.0 // indirect
 	github.com/clipperhouse/displaywidth v0.10.0 // indirect
-	github.com/clipperhouse/uax29/v2 v2.6.0 // indirect
+	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
@@ -40,7 +40,7 @@ require (
 	github.com/gohugoio/hugo v0.155.3 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-runewidth v0.0.19 // indirect
+	github.com/mattn/go-runewidth v0.0.20 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/natefinch/atomic v1.0.1 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
