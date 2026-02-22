@@ -85,6 +85,6 @@ func (h *IndexHandler) Handler(c *echo.Context) error {
 		return fmt.Errorf("could not unwrap response: %w", err)
 	}
 
-	proxy.ServeHTTP(res, r)
+	proxy.ServeHTTP(res, r) // nolint: gosec
 	return nil
 }
