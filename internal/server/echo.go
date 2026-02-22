@@ -20,13 +20,11 @@ func (s *server) customHTTPErrorHandler(c *echo.Context, err error) {
 	}
 
 	statusCode := http.StatusInternalServerError
-	message := err.Error()
+	message := "Internal Server Error"
 
-	var sc echo.HTTPStatusCoder
-	if errors.As(err, &sc) { // find error in an error chain that implements HTTPStatusCoder
-		if tmp := sc.StatusCode(); tmp != 0 {
-			statusCode = tmp
-		}
+	if he, ok := errors.AsType[*echo.HTTPError](err); ok { // find error in an error chain that implements HTTPError
+		statusCode = he.Code
+		message = he.Message
 	}
 
 	// ignore 404 and stuff
