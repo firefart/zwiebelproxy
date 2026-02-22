@@ -61,7 +61,7 @@ jobs:
         with:
           file: Dockerfiles/Dockerfile.zwiebelproxy
           push: true
-          platforms: linux/amd64,linux/arm/v7,linux/arm64/v8,linux/386,linux/ppc64le
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=firefart/zwiebelproxy:buildcache
@@ -72,6 +72,6 @@ jobs:
         with:
           file: Dockerfiles/Dockerfile.tor
           push: true
-          platforms: linux/amd64,linux/arm/v7,linux/arm64/v8,linux/386,linux/ppc64le
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta_tor.outputs.tags }}
           labels: ${{ steps.meta_tor.outputs.labels }}
