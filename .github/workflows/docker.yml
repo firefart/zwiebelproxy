@@ -57,7 +57,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push zwiebelproxy
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           file: Dockerfiles/Dockerfile.zwiebelproxy
           push: true
@@ -68,7 +68,7 @@ jobs:
           cache-to: type=registry,ref=firefart/zwiebelproxy:buildcache,mode=max
 
       - name: Build and push tor
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           file: Dockerfiles/Dockerfile.tor
           push: true
