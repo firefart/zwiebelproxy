@@ -50,8 +50,8 @@ github.com/bep/textandbinarywriter v0.1.0 h1:KXmXsRN2Uhwhm1G3e/snM8+5SPQBJrCEpIo
 github.com/bep/textandbinarywriter v0.1.0/go.mod h1:dAcHveajlWWU7PXhp6Dn4PIAYDg2H13Huif9xMS2w8w=
 github.com/bep/tmc v0.6.0 h1:5zWy4L+3gS+Kk8czzLC4g7ETaC3wkX9ZtTRdAdL8V4s=
 github.com/bep/tmc v0.6.0/go.mod h1:SNHxc3o2WSNMAYqJcAO0rxFY+pbhZzMwjIHe5xaAue0=
-github.com/bits-and-blooms/bitset v1.24.4 h1:95H15Og1clikBrKr/DuzMXkQzECs1M6hhoGXLwLQOZE=
-github.com/bits-and-blooms/bitset v1.24.4/go.mod h1:7hO7Gc7Pp1vODcmWvKMRA9BNmbv6a/7QIWpPxHddWR8=
+github.com/bits-and-blooms/bitset v1.24.5 h1:654xBVHc23gJMAgOTkPNoCVfiRxuIOAUnAZFtopqJ4w=
+github.com/bits-and-blooms/bitset v1.24.5/go.mod h1:7hO7Gc7Pp1vODcmWvKMRA9BNmbv6a/7QIWpPxHddWR8=
 github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=
 github.com/cenkalti/backoff/v4 v4.3.0/go.mod h1:Y3VNntkOUPxTVeUxJ/G5vcM//AlwfmyYozVcomhLiZE=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
