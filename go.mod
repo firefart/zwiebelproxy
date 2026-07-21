@@ -7,7 +7,7 @@ require (
 	github.com/andybalholm/brotli v1.2.2
 	github.com/charmbracelet/log v1.0.0
 	github.com/joho/godotenv v1.5.1
-	github.com/labstack/echo/v5 v5.3.0
+	github.com/labstack/echo/v5 v5.3.1
 	github.com/mattn/go-isatty v0.0.23
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/stretchr/testify v1.11.1
