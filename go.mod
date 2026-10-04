@@ -3,7 +3,7 @@ module github.com/firefart/zwiebelproxy
 go 1.27.0
 
 require (
-	github.com/a-h/templ v0.3.1020
+	github.com/a-h/templ v0.3.1070
 	github.com/andybalholm/brotli v1.2.6
 	github.com/charmbracelet/log v1.0.0
 	github.com/joho/godotenv v1.5.1
@@ -21,7 +21,7 @@ require (
 	github.com/bep/godartsass/v2 v2.5.0 // indirect
 	github.com/bep/golibsass v1.2.0 // indirect
 	github.com/bep/helpers v0.12.0 // indirect
-	github.com/bits-and-blooms/bitset v1.25.0 // indirect
+	github.com/bits-and-blooms/bitset v1.26.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect

@@ -8,8 +8,8 @@ github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.2 h1:XFJZFWESIWlUEHHjzBuv8R
 github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.2/go.mod h1:BHWO8lJzttJLqwuV8Rb1B3OG2OSzLbssZDI1FRg2eAA=
 github.com/a-h/parse v0.0.0-20250122154542-74294addb73e h1:HjVbSQHy+dnlS6C3XajZ69NYAb5jbGNfHanvm1+iYlo=
 github.com/a-h/parse v0.0.0-20250122154542-74294addb73e/go.mod h1:3mnrkvGpurZ4ZrTDbYU84xhwXW2TjTKShSwjRi2ihfQ=
-github.com/a-h/templ v0.3.1020 h1:ypAT/L5ySWEnZ6Zft/5yfoWXYYkhFNvEFOeeqecg4tw=
-github.com/a-h/templ v0.3.1020/go.mod h1:A2DlK61v+K+NRoGnhmYbNYVmtYHcFO5/AisMvBdDxTM=
+github.com/a-h/templ v0.3.1070 h1:3iCOXHXqFXa99OQzgkUOLJbNzv/QjFGLwKZkBAg+ADA=
+github.com/a-h/templ v0.3.1070/go.mod h1:iIqB3g2RHBe/WlnPwa+Bvhh1TKXHWLRnBD9NWHOLm78=
 github.com/air-verse/air v1.67.4 h1:pkWBQues0094VMgUZ9MboNfS1vyCBEXeU6QxuD6/PwU=
 github.com/air-verse/air v1.67.4/go.mod h1:XumHRkXbIg8CU5FqhQHgQC4oxQW/OQLwUMQAWln8cZs=
 github.com/alecthomas/chroma/v2 v2.27.0 h1:FodwmyOBgJULFYmDqibcp9pvfDLWdtPRh9v/r5BXYZs=
@@ -50,8 +50,8 @@ github.com/bep/textandbinarywriter v0.1.0 h1:KXmXsRN2Uhwhm1G3e/snM8+5SPQBJrCEpIo
 github.com/bep/textandbinarywriter v0.1.0/go.mod h1:dAcHveajlWWU7PXhp6Dn4PIAYDg2H13Huif9xMS2w8w=
 github.com/bep/tmc v0.7.0 h1:e0axmUwy+5EGQ6qk4wiOyDFuTqn3vpnoXIrxEG+yCX0=
 github.com/bep/tmc v0.7.0/go.mod h1:jNqktL5Su+ScC51fw6urQRvP9Dwr1hVVGr9a3rwuGb4=
-github.com/bits-and-blooms/bitset v1.25.0 h1:0Ro0qF4abCkM6SqWPVj29sFhAbMPAZpaDD7xhJ10beM=
-github.com/bits-and-blooms/bitset v1.25.0/go.mod h1:7hO7Gc7Pp1vODcmWvKMRA9BNmbv6a/7QIWpPxHddWR8=
+github.com/bits-and-blooms/bitset v1.26.0 h1:WPvcPZbP1yuKofmjs2SYIFO1EjzIGhCP9ducElLsh5Q=
+github.com/bits-and-blooms/bitset v1.26.0/go.mod h1:7hO7Gc7Pp1vODcmWvKMRA9BNmbv6a/7QIWpPxHddWR8=
 github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=
 github.com/cenkalti/backoff/v4 v4.3.0/go.mod h1:Y3VNntkOUPxTVeUxJ/G5vcM//AlwfmyYozVcomhLiZE=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
