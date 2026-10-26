@@ -8,8 +8,8 @@ github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.2 h1:XFJZFWESIWlUEHHjzBuv8R
 github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.2/go.mod h1:BHWO8lJzttJLqwuV8Rb1B3OG2OSzLbssZDI1FRg2eAA=
 github.com/a-h/parse v0.0.0-20250122154542-74294addb73e h1:HjVbSQHy+dnlS6C3XajZ69NYAb5jbGNfHanvm1+iYlo=
 github.com/a-h/parse v0.0.0-20250122154542-74294addb73e/go.mod h1:3mnrkvGpurZ4ZrTDbYU84xhwXW2TjTKShSwjRi2ihfQ=
-github.com/a-h/templ v0.3.1070 h1:3iCOXHXqFXa99OQzgkUOLJbNzv/QjFGLwKZkBAg+ADA=
-github.com/a-h/templ v0.3.1070/go.mod h1:iIqB3g2RHBe/WlnPwa+Bvhh1TKXHWLRnBD9NWHOLm78=
+github.com/a-h/templ v0.3.1100 h1:lQhjVs1IL+M6QWUvojaFBd21+kzwATppSyWkWB9oHoM=
+github.com/a-h/templ v0.3.1100/go.mod h1:j1WAOR7749mlo1AxFLQ7qbDFW5VwyoqszRTlKqEHN9M=
 github.com/air-verse/air v1.67.4 h1:pkWBQues0094VMgUZ9MboNfS1vyCBEXeU6QxuD6/PwU=
 github.com/air-verse/air v1.67.4/go.mod h1:XumHRkXbIg8CU5FqhQHgQC4oxQW/OQLwUMQAWln8cZs=
 github.com/alecthomas/chroma/v2 v2.27.0 h1:FodwmyOBgJULFYmDqibcp9pvfDLWdtPRh9v/r5BXYZs=
