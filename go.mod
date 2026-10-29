@@ -21,7 +21,7 @@ require (
 	github.com/bep/godartsass/v2 v2.5.0 // indirect
 	github.com/bep/golibsass v1.2.0 // indirect
 	github.com/bep/helpers v0.12.0 // indirect
-	github.com/bits-and-blooms/bitset v1.27.0 // indirect
+	github.com/bits-and-blooms/bitset v1.28.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
@@ -35,7 +35,7 @@ require (
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/go-logfmt/logfmt v0.6.1 // indirect
-	github.com/gobwas/glob v1.0.0 // indirect
+	github.com/gobwas/glob v1.1.0 // indirect
 	github.com/gohugoio/hashstructure v1.1.0 // indirect
 	github.com/gohugoio/hugo v0.169.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.1 // indirect
