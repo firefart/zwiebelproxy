@@ -3,11 +3,11 @@ module github.com/firefart/zwiebelproxy
 go 1.27.0
 
 require (
-	github.com/a-h/templ v0.3.1100
+	github.com/a-h/templ v0.3.1118
 	github.com/andybalholm/brotli v1.3.0
 	github.com/charmbracelet/log v1.0.0
 	github.com/joho/godotenv v1.5.1
-	github.com/labstack/echo/v5 v5.4.4
+	github.com/labstack/echo/v5 v5.4.5
 	github.com/mattn/go-isatty v0.0.24
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/stretchr/testify v1.12.1
@@ -15,7 +15,7 @@ require (
 
 require (
 	dario.cat/mergo v1.0.2 // indirect
-	github.com/a-h/parse v0.0.0-20261027111828-db2689052003 // indirect
+	github.com/a-h/parse v0.0.42 // indirect
 	github.com/air-verse/air v1.67.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/bep/godartsass/v2 v2.5.0 // indirect
@@ -51,7 +51,7 @@ require (
 	github.com/tdewolff/parse/v2 v2.8.20 // indirect
 	github.com/xo/terminfo v1.3.1 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/exp v0.0.0-20261109185158-a52e3aef5920 // indirect
+	golang.org/x/exp v0.0.0-20261112173441-d10d3b464990 // indirect
 	golang.org/x/mod v0.43.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/sync v0.25.0 // indirect
