@@ -36,7 +36,7 @@ require (
 	github.com/go-logfmt/logfmt v0.6.1 // indirect
 	github.com/gobwas/glob v1.1.0 // indirect
 	github.com/gohugoio/hashstructure v1.1.0 // indirect
-	github.com/gohugoio/hugo v0.170.0 // indirect
+	github.com/gohugoio/hugo v0.170.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.1 // indirect
 	github.com/mattn/go-colorable v0.1.16 // indirect
 	github.com/mattn/go-runewidth v0.0.31 // indirect
@@ -52,12 +52,12 @@ require (
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/exp v0.0.0-20261113113407-e3970619a1a4 // indirect
 	golang.org/x/mod v0.43.0 // indirect
-	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/net v0.63.0 // indirect
 	golang.org/x/sync v0.25.0 // indirect
 	golang.org/x/sys v0.50.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
-	golang.org/x/tools v0.52.1-0.20261106145633-d407941a339a // indirect
+	golang.org/x/tools v0.53.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 )
 
