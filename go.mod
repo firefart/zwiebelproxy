@@ -7,7 +7,7 @@ require (
 	github.com/andybalholm/brotli v1.3.0
 	github.com/charmbracelet/log v1.0.0
 	github.com/joho/godotenv v1.5.1
-	github.com/labstack/echo/v5 v5.4.6
+	github.com/labstack/echo/v5 v5.4.7
 	github.com/mattn/go-isatty v0.0.24
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/stretchr/testify v1.12.1
@@ -50,7 +50,7 @@ require (
 	github.com/tdewolff/parse/v2 v2.25.0 // indirect
 	github.com/xo/terminfo v1.3.1 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/exp v0.0.0-20261119141654-b15d094f3610 // indirect
+	golang.org/x/exp v0.0.0-20261120182113-8801fbdfac81 // indirect
 	golang.org/x/mod v0.43.0 // indirect
 	golang.org/x/net v0.63.0 // indirect
 	golang.org/x/sync v0.25.0 // indirect
